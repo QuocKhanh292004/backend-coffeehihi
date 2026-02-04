@@ -5,6 +5,7 @@ Professional Node.js Express REST API for restaurant management with authenticat
 ## 🚀 Quick Start
 
 ### 30-second setup:
+
 ```bash
 npm run docker:up    # Không cần nếu dùng database local
 npm install          # Install dependencies
@@ -19,12 +20,12 @@ API Docs: http://localhost:3000/api-docs
 
 ## 🔐 Default Credentials
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@restaurant.com | Admin@123456 |
-| Manager | manager1@restaurant.com | Manager@123456 |
-| Staff | staff1@restaurant.com | Staff@123456 |
-| Customer | customer1@email.com | Customer@123456 |
+| Role     | Email                   | Password        |
+| -------- | ----------------------- | --------------- |
+| Admin    | admin@restaurant.com    | Admin@123456    |
+| Manager  | manager1@restaurant.com | Manager@123456  |
+| Staff    | staff1@restaurant.com   | Staff@123456    |
+| Customer | customer1@email.com     | Customer@123456 |
 
 ---
 
@@ -50,12 +51,14 @@ npm run docker:logs    # View MySQL logs
 ## 📋 API Endpoints
 
 ### Authentication (No Auth Required)
+
 ```
 POST   /api/auth/login              Login user
 POST   /api/auth/register           Register customer
 ```
 
 ### Users (Admin/Manager)
+
 ```
 GET    /api/users                   List all users
 GET    /api/users/:id               Get user by ID
@@ -66,12 +69,14 @@ POST   /api/users/assign-role       Assign role to user (Admin)
 ```
 
 ### Roles (Admin)
+
 ```
 GET    /api/roles                   List all roles
 GET    /api/roles/:id               Get role details
 ```
 
 ### Branches (Admin)
+
 ```
 GET    /api/branches                List all branches
 GET    /api/branches/:id            Get branch details
@@ -81,6 +86,7 @@ DELETE /api/branches/:id            Delete branch
 ```
 
 ### Tables (Manager)
+
 ```
 GET    /api/tables                  List tables
 GET    /api/tables/:id              Get table details
@@ -90,6 +96,7 @@ DELETE /api/tables/:id              Delete table
 ```
 
 ### Menu Categories (Manager)
+
 ```
 GET    /api/categories              List categories
 POST   /api/categories              Create category
@@ -98,6 +105,7 @@ DELETE /api/categories/:id          Delete category
 ```
 
 ### Menu Items (Manager)
+
 ```
 GET    /api/items                   List items
 GET    /api/items/:id               Get item details
@@ -107,6 +115,7 @@ DELETE /api/items/:id               Delete item
 ```
 
 ### Orders (Staff/Manager)
+
 ```
 GET    /api/orders                  List orders
 GET    /api/orders/:id              Get order details
@@ -116,6 +125,7 @@ DELETE /api/orders/:id              Delete order
 ```
 
 ### Notifications (Admin)
+
 ```
 GET    /api/notifications           Get notifications
 POST   /api/notifications           Create notification
@@ -141,6 +151,7 @@ Or use Swagger UI "Authorize" button to set token globally.
 ## 📊 Sample Data
 
 Running `npm run db:seed` creates:
+
 - **3 Branches** - Restaurant locations
 - **12 Users** - 1 admin, 2 managers, 5 staff, 5 customers
 - **15 Tables** - 5 per branch
@@ -153,6 +164,7 @@ Running `npm run db:seed` creates:
 ## 🗄️ Database Schema
 
 13 Tables (MySQL 5.7+):
+
 - `users` - User accounts
 - `roles` - Role definitions (admin, manager, staff, customer)
 - `branches` - Restaurant locations
@@ -188,15 +200,19 @@ notif-1000...                     (Notifications)
 ## 👥 Role-Based Access
 
 **Admin** (role_id: 1)
+
 - Full system access, manage users/roles/branches, view analytics
 
 **Manager** (role_id: 2)
+
 - Branch management, staff supervision, menu & table management
 
 **Staff** (role_id: 3)
+
 - Order processing, table management, view orders
 
 **Customer** (role_id: 4)
+
 - View menu, place orders, view own orders
 
 ---
@@ -229,14 +245,14 @@ restaurant-backend/
 
 ## 🐛 Troubleshooting
 
-| Problem | Solution |
-|---------|----------|
-| Port 3000 already in use | Change PORT in .env or kill process on 3000 |
-| MySQL connection failed | Run `npm run docker:up` or check DB_HOST in .env |
-| Missing tables | Run `npm run db:init` to initialize schema |
-| Port 3306 in use | Change DB_PORT in .env |
-| JWT token expired | Login again to get new token |
-| Database error | Check MySQL logs with `npm run docker:logs` |
+| Problem                  | Solution                                         |
+| ------------------------ | ------------------------------------------------ |
+| Port 3000 already in use | Change PORT in .env or kill process on 3000      |
+| MySQL connection failed  | Run `npm run docker:up` or check DB_HOST in .env |
+| Missing tables           | Run `npm run db:init` to initialize schema       |
+| Port 3306 in use         | Change DB_PORT in .env                           |
+| JWT token expired        | Login again to get new token                     |
+| Database error           | Check MySQL logs with `npm run docker:logs`      |
 
 ---
 
@@ -245,6 +261,7 @@ restaurant-backend/
 Interactive API documentation available at `http://localhost:3000/api-docs`
 
 Features:
+
 - Try endpoints directly
 - Automatic authorization token management
 - Request/response examples
@@ -294,4 +311,3 @@ ADMIN_DEFAULT_PASSWORD Default admin password (default: Admin@123456)
 **Framework:** Express 5.1.0  
 **Database:** MySQL 5.7+  
 **Last Updated:** December 2024
-

@@ -1,6 +1,7 @@
 // server.js
 require("dotenv").config();
 const express = require("express");
+const path = require("path");
 const swaggerUi = require("swagger-ui-express");
 const db = require("./models");
 const { errorHandler, notFoundHandler } = require("./middleware/errorHandler");
@@ -8,18 +9,30 @@ const requestLogger = require("./middleware/requestLogger");
 const correlationIdMiddleware = require("./middleware/correlationId");
 const swaggerSpec = require("./config/swagger");
 const ridUtil = require("./utils/ridUtil");
+const imageUtil = require("./utils/imageUtil");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Thiết lập CORS
 const cors = require("cors");
-app.use(cors());
 
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 // Middleware cơ bản
 app.use(express.json());
 app.use(correlationIdMiddleware); // Add correlation ID for request tracing
 app.use(requestLogger);
+
+// Serve static files (uploaded images)
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Ensure upload directories exist on startup
+imageUtil.ensureDirectories();
 
 // Swagger UI
 app.use(
@@ -29,7 +42,7 @@ app.use(
     swaggerOptions: {
       url: "/api-docs/swagger.json",
     },
-  })
+  }),
 );
 
 // Swagger JSON endpoint

@@ -2,8 +2,8 @@
  * getAllBranches, getBranchById, createBranch, updateBranch, deleteBranch
  */
 
-const db = require('../models');
-const ridUtil = require('../utils/ridUtil');
+const db = require("../models");
+const ridUtil = require("../utils/ridUtil");
 const { Branch } = db;
 
 // Get all branches
@@ -15,7 +15,7 @@ exports.getAllBranches = async (page = 1, limit = 10, filters = {}) => {
     where,
     limit,
     offset,
-    order: [['created_at', 'DESC']]
+    order: [["created_at", "DESC"]],
   });
 
   return { branches: rows, total: count, page, limit };
@@ -24,10 +24,10 @@ exports.getAllBranches = async (page = 1, limit = 10, filters = {}) => {
 // Get branch by ID
 exports.getBranchById = async (branchId) => {
   const branch = await Branch.findOne({
-    where: { branch_id: branchId, is_delete: false }
+    where: { branch_id: branchId, is_delete: false },
   });
 
-  if (!branch) throw new Error('Branch not found');
+  if (!branch) throw new Error("Branch not found");
   return branch;
 };
 
@@ -35,13 +35,13 @@ exports.getBranchById = async (branchId) => {
 exports.createBranch = async (data) => {
   const { branch_name, description } = data;
 
-  if (!branch_name) throw new Error('branch_name is required');
+  if (!branch_name) throw new Error("branch_name is required");
 
   return await Branch.create({
-    rid: ridUtil.generateRid('br'),
+    rid: ridUtil.generateRid("br"),
     branch_name,
-    description: description || '',
-    is_delete: false
+    description: description || "",
+    is_delete: false,
   });
 };
 
