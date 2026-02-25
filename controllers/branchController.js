@@ -5,32 +5,24 @@ const logger = require("../middleware/logger");
 const responseUtil = require("../utils/responseUtil");
 const imageUtil = require("../utils/imageUtil");
 const ridUtil = require("../utils/ridUtil");
-const Branch = db.Branch;
 
 // Get all branches
 exports.getAllBranches = async (req, res) => {
   const correlationId = req.correlationId;
 
   try {
-    logger.debug("Fetching all branches", { correlationId });
-
-    const branches = await Branch.findAll({
+    const branches = await db.Branch.findAll({
       where: { is_delete: false },
       include: [
         {
           model: db.User,
+          as: "Users", // ✅ khớp với alias trong index.js
           attributes: ["user_id", "user_name", "email"],
           through: { attributes: [] },
         },
       ],
     });
 
-    logger.info("Branches retrieved successfully", {
-      correlationId,
-      context: { count: branches.length },
-    });
-
-    // Convert relative image paths to full URLs
     imageUtil.attachFullUrls(branches, req);
 
     return res.json(
@@ -41,10 +33,7 @@ exports.getAllBranches = async (req, res) => {
       ),
     );
   } catch (error) {
-    logger.error("Get all branches failed", {
-      correlationId,
-      error,
-    });
+    logger.error("Get all branches failed", { correlationId, error });
     return res
       .status(500)
       .json(
@@ -59,12 +48,7 @@ exports.getBranchDetail = async (req, res) => {
   const { id } = req.params;
 
   try {
-    logger.debug("Fetching branch detail", {
-      correlationId,
-      context: { branchId: id },
-    });
-
-    const branch = await Branch.findOne({
+    const branch = await db.Branch.findOne({
       where: { branch_id: id, is_delete: false },
       include: [
         {
@@ -79,6 +63,7 @@ exports.getBranchDetail = async (req, res) => {
         },
         {
           model: db.User,
+          as: "Users", // ✅ khớp với alias trong index.js
           attributes: ["user_id", "user_name", "email"],
           through: { attributes: [] },
         },
@@ -86,10 +71,6 @@ exports.getBranchDetail = async (req, res) => {
     });
 
     if (!branch) {
-      logger.warn("Branch not found", {
-        correlationId,
-        context: { branchId: id },
-      });
       return res
         .status(404)
         .json(
@@ -100,12 +81,6 @@ exports.getBranchDetail = async (req, res) => {
         );
     }
 
-    logger.info("Branch detail retrieved successfully", {
-      correlationId,
-      context: { branchId: id, branch_name: branch.branch_name },
-    });
-
-    // Attach full URL for image
     imageUtil.attachFullUrls(branch, req);
 
     return res.json(
@@ -131,7 +106,6 @@ exports.createBranch = async (req, res) => {
   const { branch_name, description } = req.body;
 
   try {
-    // Prepare payload
     const payload = {
       rid: ridUtil.generateRid("br"),
       branch_name,
@@ -139,7 +113,6 @@ exports.createBranch = async (req, res) => {
       is_delete: false,
     };
 
-    // If an image file is provided in multipart/form-data, validate and save
     if (req.file) {
       const validation = imageUtil.validateImageFile(
         req.file.buffer,
@@ -152,13 +125,10 @@ exports.createBranch = async (req, res) => {
           }),
         );
       }
-      const imagePath = imageUtil.saveBranchImage(req.file.buffer, "new");
-      payload.branch_image = imagePath;
+      payload.branch_image = imageUtil.saveBranchImage(req.file.buffer, "new");
     }
 
-    const newBranch = await Branch.create(payload);
-
-    // Attach full URL for image
+    const newBranch = await db.Branch.create(payload);
     imageUtil.attachFullUrls(newBranch, req);
 
     return res
@@ -186,7 +156,7 @@ exports.updateBranch = async (req, res) => {
   const { branch_name, description } = req.body;
 
   try {
-    const branch = await Branch.findOne({
+    const branch = await db.Branch.findOne({
       where: { branch_id: id, is_delete: false },
     });
     if (!branch) {
@@ -200,7 +170,6 @@ exports.updateBranch = async (req, res) => {
         );
     }
 
-    // If file provided, validate and update image
     let imagePath;
     if (req.file) {
       const validation = imageUtil.validateImageFile(
@@ -224,7 +193,7 @@ exports.updateBranch = async (req, res) => {
     const updatePayload = { branch_name, description };
     if (imagePath) updatePayload.branch_image = imagePath;
 
-    const [updatedRows] = await Branch.update(updatePayload, {
+    const [updatedRows] = await db.Branch.update(updatePayload, {
       where: { branch_id: id, is_delete: false },
     });
 
@@ -239,9 +208,7 @@ exports.updateBranch = async (req, res) => {
         );
     }
 
-    const updatedBranch = await Branch.findByPk(id);
-
-    // Attach full URL for image
+    const updatedBranch = await db.Branch.findByPk(id);
     imageUtil.attachFullUrls(updatedBranch, req);
 
     return res.json(
@@ -261,7 +228,7 @@ exports.deleteBranch = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const [updatedRows] = await Branch.update(
+    const [updatedRows] = await db.Branch.update(
       { is_delete: true },
       { where: { branch_id: id, is_delete: false } },
     );
@@ -285,6 +252,3 @@ exports.deleteBranch = async (req, res) => {
       .json(responseUtil.serverError(req, "Lỗi server khi xóa chi nhánh"));
   }
 };
-
-// Note: Dedicated branch image upload/delete handlers were removed.
-// Image handling for branches is performed during create/update via multipart `req.file`.
