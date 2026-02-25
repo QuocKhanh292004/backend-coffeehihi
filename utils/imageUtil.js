@@ -1,5 +1,3 @@
-/** Image Utility - Handle image uploads and storage */
-
 const fs = require("fs");
 const path = require("path");
 const logger = require("../middleware/logger");
@@ -107,16 +105,13 @@ const saveBranchImage = (fileBuffer, branchId) => {
   try {
     ensureDirectories();
 
-    // Generate unique filename
     const timestamp = Date.now();
     const filename = `branch_${branchId}_${timestamp}.jpg`;
     const filepath = path.join(BRANCHES_DIR, filename);
 
-    // Save file
     fs.writeFileSync(filepath, fileBuffer);
     logger.info("Branch image saved successfully", { filepath, branchId });
 
-    // Return relative path for database storage
     return `/uploads/branches/${filename}`;
   } catch (error) {
     logger.error("Error saving branch image", { error, branchId });
@@ -124,7 +119,9 @@ const saveBranchImage = (fileBuffer, branchId) => {
   }
 };
 
-// Generic save for different entity types
+/**
+ * Generic save for different entity types
+ */
 const saveImage = (subdir, fileBuffer, id, ext = "jpg") => {
   try {
     ensureDirectories();
@@ -155,22 +152,23 @@ const deleteBranchImage = (imagePath) => {
   try {
     if (!imagePath) return true;
 
-    // Convert relative path to absolute
     const absolutePath = path.join(__dirname, "..", imagePath);
-
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
       logger.info("Branch image deleted successfully", { imagePath });
-      return true;
     }
     return true;
   } catch (error) {
     logger.error("Error deleting branch image", { error, imagePath });
-    // Don't throw - continue even if deletion fails
     return false;
   }
 };
 
+/**
+ * Delete any image from disk
+ * @param {string} imagePath - Relative image path from database
+ * @returns {boolean} Success status
+ */
 const deleteImage = (imagePath) => {
   try {
     if (!imagePath) return true;
@@ -178,7 +176,6 @@ const deleteImage = (imagePath) => {
     if (fs.existsSync(absolutePath)) {
       fs.unlinkSync(absolutePath);
       logger.info("Image deleted successfully", { imagePath });
-      return true;
     }
     return true;
   } catch (error) {
@@ -196,12 +193,7 @@ const deleteImage = (imagePath) => {
  */
 const updateBranchImage = (fileBuffer, branchId, oldImagePath) => {
   try {
-    // Delete old image
-    if (oldImagePath) {
-      deleteBranchImage(oldImagePath);
-    }
-
-    // Save new image
+    if (oldImagePath) deleteBranchImage(oldImagePath);
     return saveBranchImage(fileBuffer, branchId);
   } catch (error) {
     logger.error("Error updating branch image", { error, branchId });
@@ -211,15 +203,80 @@ const updateBranchImage = (fileBuffer, branchId, oldImagePath) => {
 
 const saveCategoryImage = (fileBuffer, categoryId) =>
   saveImage("categories", fileBuffer, categoryId);
+
 const saveItemImage = (fileBuffer, itemId) =>
   saveImage("items", fileBuffer, itemId);
+
 const updateCategoryImage = (fileBuffer, categoryId, oldImagePath) => {
   if (oldImagePath) deleteImage(oldImagePath);
   return saveCategoryImage(fileBuffer, categoryId);
 };
+
 const updateItemImage = (fileBuffer, itemId, oldImagePath) => {
   if (oldImagePath) deleteImage(oldImagePath);
   return saveItemImage(fileBuffer, itemId);
+};
+
+/**
+ * Build absolute URL for a relative upload path using request info
+ * @param {object} req - Express request object
+ * @param {string} relativePath - Relative path starting with /uploads
+ * @returns {string|null} Full URL or null
+ */
+const getFullUrl = (req, relativePath) => {
+  if (!relativePath) return null;
+  if (!relativePath.startsWith("/uploads")) return relativePath;
+  const protocol = req.protocol || "http";
+  const host =
+    req.get && req.get("host")
+      ? req.get("host")
+      : process.env.HOST || `localhost:${process.env.PORT || 3000}`;
+  return `${protocol}://${host}${relativePath}`;
+};
+
+/**
+ * Attach full URLs for any keys ending with '_image' in Sequelize instance or array.
+ * Safely converts Sequelize instances via toJSON() to avoid .get() errors on nested associations.
+ *
+ * @param {object|Array} obj - Sequelize instance, array of instances, or plain object
+ * @param {object} req - Express request object
+ * @returns {object|Array} The original obj with dataValues mutated to contain full URLs
+ */
+const attachFullUrls = (obj, req) => {
+  if (!obj) return obj;
+
+  const baseUrl = `${req.protocol}://${req.get("host")}`;
+
+  const processDataValues = (dataValues) => {
+    if (!dataValues || typeof dataValues !== "object") return;
+    for (const key of Object.keys(dataValues)) {
+      const val = dataValues[key];
+      if (
+        val &&
+        typeof val === "string" &&
+        key.endsWith("_image") &&
+        val.startsWith("/uploads")
+      ) {
+        dataValues[key] = `${baseUrl}${val}`;
+      }
+    }
+  };
+
+  if (Array.isArray(obj)) {
+    obj.forEach((item) => {
+      if (item && item.dataValues) {
+        processDataValues(item.dataValues);
+      } else {
+        processDataValues(item);
+      }
+    });
+  } else if (obj && obj.dataValues) {
+    processDataValues(obj.dataValues);
+  } else {
+    processDataValues(obj);
+  }
+
+  return obj;
 };
 
 module.exports = {
@@ -235,80 +292,10 @@ module.exports = {
   saveItemImage,
   updateCategoryImage,
   updateItemImage,
+  getFullUrl,
+  attachFullUrls,
   UPLOADS_DIR,
   BRANCHES_DIR,
   CATEGORIES_DIR,
   ITEMS_DIR,
 };
-
-// Build absolute URL for a relative upload path using request info
-const getFullUrl = (req, relativePath) => {
-  if (!relativePath) return null;
-  if (!relativePath.startsWith("/uploads")) return relativePath;
-  const protocol = req.protocol || "http";
-  const host =
-    req.get && req.get("host")
-      ? req.get("host")
-      : process.env.HOST || `localhost:${process.env.PORT || 3000}`;
-  return `${protocol}://${host}${relativePath}`;
-};
-
-// Attach full URLs for any keys ending with '_image' in object/array recursively
-// Handles Sequelize instances by operating on `dataValues` and prevents
-// infinite recursion using a WeakSet of visited objects.
-const attachFullUrls = (obj, req, visited = new WeakSet()) => {
-  if (!obj) return obj;
-
-  // Prevent circular recursion
-  if (typeof obj === "object") {
-    if (visited.has(obj)) return obj;
-    visited.add(obj);
-  }
-
-  // If this looks like a Sequelize instance, convert to plain object and
-  // re-attach the processed plain object back onto `dataValues` so JSON
-  // serialization sends the modified values.
-  if (obj && typeof obj.toJSON === "function") {
-    const plain = obj.toJSON();
-    attachFullUrls(plain, req, visited);
-    try {
-      // try to replace dataValues so Express/Sequelize will serialize the modified data
-      if (obj.dataValues && typeof obj.dataValues === "object") {
-        obj.dataValues = plain;
-      }
-    } catch (e) {
-      // ignore if we cannot assign
-    }
-    return obj;
-  }
-
-  if (Array.isArray(obj)) {
-    for (const item of obj) attachFullUrls(item, req, visited);
-    return obj;
-  }
-
-  if (typeof obj === "object") {
-    for (const key of Object.keys(obj)) {
-      const val = obj[key];
-      if (
-        val &&
-        typeof val === "string" &&
-        key.endsWith("_image") &&
-        val.startsWith("/uploads")
-      ) {
-        try {
-          obj[key] = getFullUrl(req, val);
-        } catch (e) {
-          /* ignore */
-        }
-      } else if (val && typeof val === "object") {
-        attachFullUrls(val, req, visited);
-      }
-    }
-  }
-  return obj;
-};
-
-// Export URL helpers (ensure they're available on require('../utils/imageUtil'))
-module.exports.getFullUrl = getFullUrl;
-module.exports.attachFullUrls = attachFullUrls;

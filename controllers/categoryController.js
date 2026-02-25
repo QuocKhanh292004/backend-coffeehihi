@@ -74,14 +74,7 @@ exports.getAllCategories = async (req, res) => {
   try {
     const categories = await MenuCategory.findAll({
       where: { branch_id: branch_id, is_delete: false },
-      include: [
-        {
-          model: db.MenuItem,
-          attributes: ["item_id", "item_name", "price"],
-          where: { is_disable: false },
-          required: false,
-        },
-      ],
+      // include: [...],  // ← Comment out include này
       order: [["category_id", "ASC"]],
     });
 

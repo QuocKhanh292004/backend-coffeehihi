@@ -1,8 +1,8 @@
 // routes/tableRoutes.js
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const tableController = require('../controllers/tableController');
-const { verifyToken, isAdminOrManager } = require('../middleware/auth');
+const tableController = require("../controllers/tableController");
+const { verifyToken, isAdminOrManager } = require("../middleware/auth");
 
 /**
  * @swagger
@@ -16,9 +16,9 @@ const { verifyToken, isAdminOrManager } = require('../middleware/auth');
  *         application/json:
  *           schema:
  *             type: object
- *             required: ['table_number', 'branch_id', 'capacity']
+ *             required: ['table_name', 'branch_id', 'capacity']
  *             properties:
- *               table_number:
+ *               table_name:
  *                 type: string
  *                 example: 'A01'
  *               branch_id:
@@ -51,8 +51,8 @@ const { verifyToken, isAdminOrManager } = require('../middleware/auth');
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
-router.post('/', verifyToken, isAdminOrManager, tableController.createTable);
-router.get('/', verifyToken, tableController.getAllTablesByBranch);
+router.post("/", verifyToken, isAdminOrManager, tableController.createTable);
+router.get("/", verifyToken, tableController.getAllTablesByBranch);
 
 /**
  * @swagger
@@ -114,8 +114,13 @@ router.get('/', verifyToken, tableController.getAllTablesByBranch);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-router.get('/:id', verifyToken, tableController.getTableDetail);
-router.put('/:id', verifyToken, isAdminOrManager, tableController.updateTable);
-router.delete('/:id', verifyToken, isAdminOrManager, tableController.deleteTable);
+router.get("/:id", verifyToken, tableController.getTableDetail);
+router.put("/:id", verifyToken, isAdminOrManager, tableController.updateTable);
+router.delete(
+  "/:id",
+  verifyToken,
+  isAdminOrManager,
+  tableController.deleteTable,
+);
 
 module.exports = router;

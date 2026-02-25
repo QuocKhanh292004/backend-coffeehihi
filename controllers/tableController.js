@@ -1,10 +1,10 @@
 /** Table Controller - HTTP handlers for table management */
 
-const logger = require('../middleware/logger');
-const responseUtil = require('../utils/responseUtil');
-const { tableService } = require('../services');
-const db = require('../models');
-const ridUtil = require('../utils/ridUtil');
+const logger = require("../middleware/logger");
+const responseUtil = require("../utils/responseUtil");
+const { tableService } = require("../services");
+const db = require("../models");
+const ridUtil = require("../utils/ridUtil");
 const Table = db.Table;
 
 // Create table
@@ -14,27 +14,25 @@ exports.createTable = async (req, res) => {
 
   try {
     const newTable = await Table.create({
-      rid: ridUtil.generateRid('tbl'),
+      rid: ridUtil.generateRid("tbl"),
       table_name,
       branch_id,
-      description
+      description,
     });
 
-    return res.status(201).json(responseUtil.success(req,
-      'Tạo bàn thành công',
-      newTable,
-      201
-    ));
+    return res
+      .status(201)
+      .json(responseUtil.success(req, "Tạo bàn thành công", newTable, 201));
   } catch (error) {
-    if (error.name === 'SequelizeUniqueConstraintError') {
-      return res.status(409).json(responseUtil.conflict(req,
-        'RID đã tồn tại trong hệ thống'
-      ));
+    if (error.name === "SequelizeUniqueConstraintError") {
+      return res
+        .status(409)
+        .json(responseUtil.conflict(req, "RID đã tồn tại trong hệ thống"));
     }
-    logger.error('Create table failed', { correlationId, error });
-    return res.status(500).json(responseUtil.serverError(req,
-      'Lỗi server khi tạo bàn'
-    ));
+    logger.error("Create table failed", { correlationId, error });
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Lỗi server khi tạo bàn"));
   }
 };
 
@@ -44,24 +42,28 @@ exports.getAllTablesByBranch = async (req, res) => {
   const { branch_id } = req.query;
 
   if (!branch_id) {
-    return res.status(400).json(responseUtil.validationError(req,
-      'Branch ID là bắt buộc',
-      { branch_id: 'Branch ID không được để trống' }
-    ));
+    return res.status(400).json(
+      responseUtil.validationError(req, "Branch ID là bắt buộc", {
+        branch_id: "Branch ID không được để trống",
+      }),
+    );
   }
 
   try {
     const tables = await tableService.getAllTables(branch_id);
 
-    return res.json(responseUtil.success(req,
-      `Lấy danh sách ${tables.length} bàn thành công`,
-      tables
-    ));
+    return res.json(
+      responseUtil.success(
+        req,
+        `Lấy danh sách ${tables.length} bàn thành công`,
+        tables,
+      ),
+    );
   } catch (error) {
-    logger.error('Get tables by branch failed', { correlationId, error });
-    return res.status(500).json(responseUtil.serverError(req,
-      'Lỗi server khi lấy danh sách bàn'
-    ));
+    logger.error("Get tables by branch failed", { correlationId, error });
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Lỗi server khi lấy danh sách bàn"));
   }
 };
 
@@ -74,20 +76,21 @@ exports.getTableDetail = async (req, res) => {
     const table = await tableService.getTableById(id);
 
     if (!table) {
-      return res.status(404).json(responseUtil.notFound(req,
-        'Không tìm thấy bàn hoặc bàn đã bị xóa'
-      ));
+      return res
+        .status(404)
+        .json(
+          responseUtil.notFound(req, "Không tìm thấy bàn hoặc bàn đã bị xóa"),
+        );
     }
 
-    return res.json(responseUtil.success(req,
-      'Lấy thông tin bàn thành công',
-      table
-    ));
+    return res.json(
+      responseUtil.success(req, "Lấy thông tin bàn thành công", table),
+    );
   } catch (error) {
-    logger.error('Get table detail failed', { correlationId, error });
-    return res.status(500).json(responseUtil.serverError(req,
-      'Lỗi server khi lấy thông tin bàn'
-    ));
+    logger.error("Get table detail failed", { correlationId, error });
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Lỗi server khi lấy thông tin bàn"));
   }
 };
 
@@ -100,26 +103,27 @@ exports.updateTable = async (req, res) => {
   try {
     const [updatedRows] = await Table.update(
       { table_name, description },
-      { where: { table_id: id, is_delete: false } }
+      { where: { table_id: id, is_delete: false } },
     );
 
     if (updatedRows === 0) {
-      return res.status(404).json(responseUtil.notFound(req,
-        'Không tìm thấy bàn hoặc bàn đã bị xóa'
-      ));
+      return res
+        .status(404)
+        .json(
+          responseUtil.notFound(req, "Không tìm thấy bàn hoặc bàn đã bị xóa"),
+        );
     }
 
     const updatedTable = await tableService.getTableById(id);
 
-    return res.json(responseUtil.success(req,
-      'Cập nhật bàn thành công',
-      updatedTable
-    ));
+    return res.json(
+      responseUtil.success(req, "Cập nhật bàn thành công", updatedTable),
+    );
   } catch (error) {
-    logger.error('Update table failed', { correlationId, error });
-    return res.status(500).json(responseUtil.serverError(req,
-      'Lỗi server khi cập nhật bàn'
-    ));
+    logger.error("Update table failed", { correlationId, error });
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Lỗi server khi cập nhật bàn"));
   }
 };
 
@@ -131,22 +135,22 @@ exports.deleteTable = async (req, res) => {
   try {
     const [updatedRows] = await Table.update(
       { is_delete: true },
-      { where: { table_id: id, is_delete: false } }
+      { where: { table_id: id, is_delete: false } },
     );
 
     if (updatedRows === 0) {
-      return res.status(404).json(responseUtil.notFound(req,
-        'Không tìm thấy bàn hoặc bàn đã bị xóa'
-      ));
+      return res
+        .status(404)
+        .json(
+          responseUtil.notFound(req, "Không tìm thấy bàn hoặc bàn đã bị xóa"),
+        );
     }
 
-    return res.json(responseUtil.success(req,
-      'Xóa bàn thành công'
-    ));
+    return res.json(responseUtil.success(req, "Xóa bàn thành công"));
   } catch (error) {
-    logger.error('Delete table failed', { correlationId, error });
-    return res.status(500).json(responseUtil.serverError(req,
-      'Lỗi server khi xóa bàn'
-    ));
+    logger.error("Delete table failed", { correlationId, error });
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Lỗi server khi xóa bàn"));
   }
 };

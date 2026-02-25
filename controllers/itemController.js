@@ -1,5 +1,3 @@
-/** Menu Item Controller - HTTP handlers for menu items */
-
 const db = require("../models");
 const logger = require("../middleware/logger");
 const responseUtil = require("../utils/responseUtil");
@@ -20,13 +18,11 @@ exports.createItem = async (req, res) => {
         where: { category_id, is_delete: false },
       });
       if (!category) {
-        return res
-          .status(400)
-          .json(
-            responseUtil.validationError(req, "Category không tồn tại", {
-              category_id,
-            }),
-          );
+        return res.status(400).json(
+          responseUtil.validationError(req, "Category không tồn tại", {
+            category_id,
+          }),
+        );
       }
     }
     if (branch_id) {
@@ -34,19 +30,18 @@ exports.createItem = async (req, res) => {
         where: { branch_id, is_delete: false },
       });
       if (!branch) {
-        return res
-          .status(400)
-          .json(
-            responseUtil.validationError(req, "Branch không tồn tại", {
-              branch_id,
-            }),
-          );
+        return res.status(400).json(
+          responseUtil.validationError(req, "Branch không tồn tại", {
+            branch_id,
+          }),
+        );
       }
     }
 
     // Create item without image first
+    const rid = ridUtil.generateRid("itm"); // ✅ Fix: khai báo rid để dùng trong catch
     const payload = {
-      rid: ridUtil.generateRid("itm"),
+      rid,
       item_name,
       category_id,
       branch_id,
@@ -67,13 +62,11 @@ exports.createItem = async (req, res) => {
       if (!validation.isValid) {
         // Delete created DB row to avoid dangling entries
         await MenuItem.destroy({ where: { item_id: newItem.item_id } });
-        return res
-          .status(400)
-          .json(
-            responseUtil.validationError(req, validation.error, {
-              file: validation.error,
-            }),
-          );
+        return res.status(400).json(
+          responseUtil.validationError(req, validation.error, {
+            file: validation.error,
+          }),
+        );
       }
 
       try {
@@ -86,11 +79,9 @@ exports.createItem = async (req, res) => {
           { where: { item_id: newItem.item_id } },
         );
         if (updated === 0) {
-          // rollback image file
           imageUtil.deleteImage(imagePath);
         }
       } catch (e) {
-        // If saving image fails, delete created DB record to avoid partial state
         try {
           await MenuItem.destroy({ where: { item_id: newItem.item_id } });
         } catch (e2) {
@@ -121,7 +112,7 @@ exports.createItem = async (req, res) => {
     if (error.name === "SequelizeUniqueConstraintError") {
       logger.warn("Create item duplicate RID", {
         correlationId,
-        context: { rid, item_name },
+        context: { item_name }, // ✅ Fix: bỏ `rid` vì không còn undefined ở đây
       });
       return res
         .status(409)
@@ -148,7 +139,6 @@ exports.getAllItems = async (req, res) => {
   const correlationId = req.correlationId;
   const { branch_id, category_id } = req.query;
 
-  // ========== VALIDATION ==========
   if (!branch_id && !category_id) {
     logger.warn("Get items missing required filters", { correlationId });
     return res
@@ -168,28 +158,22 @@ exports.getAllItems = async (req, res) => {
       context: { branch_id, category_id },
     });
 
-    // ========== BUILD WHERE CLAUSE ==========
-    let whereClause = { is_delete: false };
+    const whereClause = { is_delete: false };
+    if (branch_id) whereClause.branch_id = branch_id;
+    if (category_id) whereClause.category_id = category_id;
 
-    if (branch_id) {
-      whereClause.branch_id = branch_id;
-    }
-
-    if (category_id) {
-      whereClause.category_id = category_id;
-    }
-
-    // ========== QUERY ==========
     const items = await MenuItem.findAll({
       where: whereClause,
       include: [
         {
           model: db.MenuCategory,
           attributes: ["category_id", "category_name"],
+          required: false, // ✅ Fix: thêm required: false để tránh lỗi nếu category bị xóa
         },
         {
           model: db.Branch,
           attributes: ["branch_id", "branch_name"],
+          required: false, // ✅ Fix: thêm required: false
         },
       ],
       order: [["item_id", "ASC"]],
@@ -199,7 +183,7 @@ exports.getAllItems = async (req, res) => {
       correlationId,
       context: { branch_id, category_id, count: items.length },
     });
-    // attach full urls for images
+
     imageUtil.attachFullUrls(items, req);
 
     return res.json(
@@ -227,7 +211,6 @@ exports.getAllItems = async (req, res) => {
 // GET ITEM DETAIL
 // ============================================================================
 
-// Get single item details
 exports.getItemDetail = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
@@ -244,10 +227,12 @@ exports.getItemDetail = async (req, res) => {
         {
           model: db.MenuCategory,
           attributes: ["category_id", "category_name"],
+          required: false, // ✅ Fix: thêm required: false
         },
         {
           model: db.Branch,
           attributes: ["branch_id", "branch_name"],
+          required: false, // ✅ Fix: thêm required: false
         },
       ],
     });
@@ -295,7 +280,6 @@ exports.getItemDetail = async (req, res) => {
 // UPDATE ITEM
 // ============================================================================
 
-// Update item information
 exports.updateItem = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
@@ -316,22 +300,19 @@ exports.updateItem = async (req, res) => {
         );
     }
 
-    // Image update must use multipart/form-data (req.file) or use /:id/image endpoint
     let imagePath;
     if (req.file) {
-      const imageUtil = require("../utils/imageUtil");
       const validation = imageUtil.validateImageFile(
+        // ✅ Fix: dùng imageUtil đã import ở đầu file, không require lại
         req.file.buffer,
         req.file.originalname,
       );
       if (!validation.isValid) {
-        return res
-          .status(400)
-          .json(
-            responseUtil.validationError(req, validation.error, {
-              file: validation.error,
-            }),
-          );
+        return res.status(400).json(
+          responseUtil.validationError(req, validation.error, {
+            file: validation.error,
+          }),
+        );
       }
       imagePath = imageUtil.updateItemImage(
         req.file.buffer,
@@ -389,7 +370,6 @@ exports.updateItem = async (req, res) => {
 // DELETE ITEM (SOFT DELETE)
 // ============================================================================
 
-// Delete menu item (soft delete)
 exports.deleteItem = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
@@ -443,7 +423,10 @@ exports.deleteItem = async (req, res) => {
   }
 };
 
-// Upload item image
+// ============================================================================
+// UPLOAD ITEM IMAGE
+// ============================================================================
+
 exports.uploadItemImage = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
@@ -463,34 +446,30 @@ exports.uploadItemImage = async (req, res) => {
     }
 
     if (!req.file) {
-      return res
-        .status(400)
-        .json(
-          responseUtil.validationError(req, "Vui lòng cung cấp tệp ảnh", {
-            file: "Tệp ảnh là bắt buộc",
-          }),
-        );
+      return res.status(400).json(
+        responseUtil.validationError(req, "Vui lòng cung cấp tệp ảnh", {
+          file: "Tệp ảnh là bắt buộc",
+        }),
+      );
     }
 
-    const imageUtil = require("../utils/imageUtil");
     const validation = imageUtil.validateImageFile(
+      // ✅ Fix: dùng imageUtil đã import ở đầu file
       req.file.buffer,
       req.file.originalname,
     );
     if (!validation.isValid) {
-      return res
-        .status(400)
-        .json(
-          responseUtil.validationError(req, validation.error, {
-            file: validation.error,
-          }),
-        );
+      return res.status(400).json(
+        responseUtil.validationError(req, validation.error, {
+          file: validation.error,
+        }),
+      );
     }
 
     const imagePath = imageUtil.updateItemImage(
       req.file.buffer,
       id,
-      item.item_image,
+      item.item_image, // ✅ Fix: truyền old image path để xóa ảnh cũ
     );
 
     const [updatedRows] = await MenuItem.update(
@@ -510,6 +489,7 @@ exports.uploadItemImage = async (req, res) => {
       responseUtil.success(req, "Tải lên ảnh mục menu thành công", updatedItem),
     );
   } catch (error) {
+    logger.error("Upload item image failed", { correlationId, error }); // ✅ Fix: thêm log lỗi
     return res
       .status(500)
       .json(
@@ -518,7 +498,10 @@ exports.uploadItemImage = async (req, res) => {
   }
 };
 
-// Delete item image
+// ============================================================================
+// DELETE ITEM IMAGE
+// ============================================================================
+
 exports.deleteItemImageHandler = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
@@ -542,8 +525,7 @@ exports.deleteItemImageHandler = async (req, res) => {
         .json(responseUtil.badRequest(req, "Mục menu không có ảnh để xóa"));
     }
 
-    const imageUtil = require("../utils/imageUtil");
-    imageUtil.deleteImage(item.item_image);
+    imageUtil.deleteImage(item.item_image); // ✅ Fix: dùng imageUtil đã import ở đầu file
     await MenuItem.update({ item_image: null }, { where: { item_id: id } });
     const updatedItem = await MenuItem.findByPk(id);
     imageUtil.attachFullUrls(updatedItem, req);
@@ -551,6 +533,7 @@ exports.deleteItemImageHandler = async (req, res) => {
       responseUtil.success(req, "Xóa ảnh mục menu thành công", updatedItem),
     );
   } catch (error) {
+    logger.error("Delete item image failed", { correlationId, error }); // ✅ Fix: thêm log lỗi
     return res
       .status(500)
       .json(responseUtil.serverError(req, "Lỗi server khi xóa ảnh mục menu"));
