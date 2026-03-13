@@ -1,52 +1,71 @@
-/** Table Service - Table management operations
- * getAllTables, getTableById, createTable, updateTable, deleteTable
- */
+/** Table Service - Table management operations */
 
 const db = require("../models");
 const ridUtil = require("../utils/ridUtil");
 const { Table, Branch } = db;
 
 // Get all tables
-exports.getAllTables = async (page = 1, limit = 10, filters = {}) => {
-  const offset = (page - 1) * limit;
-  const where = { is_delete: false };
+exports.getAllTables = async (page = 1, limit = 100, filters = {}) => {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safeLimit = Math.max(1, Number(limit) || 100);
+  const offset = (safePage - 1) * safeLimit;
 
-  if (filters.branch_id) where.branch_id = filters.branch_id;
+  const where = { is_delete: false };
+  if (filters.branch_id) where.branch_id = Number(filters.branch_id);
 
   const { count, rows } = await Table.findAndCountAll({
     where,
+    attributes: [
+      "table_id",
+      "rid",
+      "table_name",
+      "description",
+      "branch_id",
+      "capacity",
+      "status",
+      "is_delete",
+    ],
     include: [{ model: Branch, attributes: ["branch_id", "branch_name"] }],
-    limit,
+    limit: safeLimit,
     offset,
     order: [["table_id", "DESC"]],
   });
 
-  return { tables: rows, total: count, page, limit };
+  return { tables: rows, total: count, page: safePage, limit: safeLimit };
 };
 
 // Get table by ID
 exports.getTableById = async (tableId) => {
   const table = await Table.findOne({
     where: { table_id: tableId, is_delete: false },
+    attributes: [
+      "table_id",
+      "rid",
+      "table_name",
+      "description",
+      "branch_id",
+      "capacity",
+      "status",
+      "is_delete",
+    ],
     include: [{ model: Branch, attributes: ["branch_id", "branch_name"] }],
   });
-
   if (!table) throw new Error("Table not found");
   return table;
 };
 
 // Create table
 exports.createTable = async (data) => {
-  const { table_name, branch_id, description } = data;
-
+  const { table_name, branch_id, capacity, status, description } = data;
   if (!table_name || !branch_id) {
     throw new Error("table_name and branch_id are required");
   }
-
   return await Table.create({
     rid: ridUtil.generateRid("tbl"),
     table_name,
     branch_id,
+    capacity: capacity || 0,
+    status: status || "available",
     description: description || "",
     is_delete: false,
   });

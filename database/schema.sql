@@ -335,3 +335,6 @@ CREATE TABLE audit_logs (
   INDEX idx_audit_logs_created_at (created_at),
   CONSTRAINT fk_audit_logs_user_id FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE tables ADD COLUMN capacity INT DEFAULT 0;
+ALTER TABLE tables ADD COLUMN status ENUM('available','occupied','reserved') DEFAULT 'available';
