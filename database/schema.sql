@@ -223,14 +223,16 @@ CREATE TABLE email_verification_tokens (
 CREATE TABLE password_reset_tokens (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  token VARCHAR(500) NOT NULL UNIQUE,
+  token VARCHAR(500) UNIQUE,
+  otp VARCHAR(6) NOT NULL,
   expires_at DATETIME NOT NULL,
   is_used BOOLEAN DEFAULT FALSE,
   used_at DATETIME,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_reset_tokens_user_id (user_id),
+  INDEX idx_reset_tokens_otp (otp),
   CONSTRAINT fk_reset_tokens_user_id FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Password reset tokens (15min expiry)';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Password reset OTP tokens (5min expiry)';
 
 -- ============================================================================
 -- AUDIT LOGS TABLE

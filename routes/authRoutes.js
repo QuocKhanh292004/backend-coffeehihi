@@ -258,6 +258,175 @@ router.post("/logout", verifyToken, authController.logout);
  */
 router.post("/check-permission", verifyToken, authController.checkPermission);
 
+// ============================================================================
+// FORGOT PASSWORD WITH OTP ROUTES
+// ============================================================================
+
+/**
+ * @swagger
+ * /api/auth/forgot-password/request-otp:
+ *   post:
+ *     summary: Bước 1 - Yêu cầu mã OTP để đặt lại mật khẩu
+ *     description: Gửi mã OTP 6 số qua email. OTP có hiệu lực 5 phút.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['email']
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: 'user@example.com'
+ *                 description: 'Email đã đăng ký trong hệ thống'
+ *     responses:
+ *       200:
+ *         description: OTP đã được gửi đến email
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Mã OTP đã được gửi đến email của bạn'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     expiresIn:
+ *                       type: string
+ *                       example: '5 phút'
+ *       400:
+ *         description: Email không hợp lệ
+ *       503:
+ *         description: Không thể gửi email
+ */
+router.post(
+  "/forgot-password/request-otp",
+  authController.requestPasswordResetOTP,
+);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password/verify-otp:
+ *   post:
+ *     summary: Bước 2 - Xác thực mã OTP
+ *     description: Nhập mã OTP 6 số đã nhận qua email để xác thực. Trả về resetToken để dùng cho bước đổi mật khẩu.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['email', 'otp']
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: 'user@example.com'
+ *                 description: 'Email đã dùng để yêu cầu OTP'
+ *               otp:
+ *                 type: string
+ *                 pattern: '^\d{6}$'
+ *                 example: '123456'
+ *                 description: 'Mã OTP 6 chữ số đã nhận qua email'
+ *     responses:
+ *       200:
+ *         description: OTP xác thực thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'OTP xác thực thành công'
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     resetToken:
+ *                       type: string
+ *                       example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                       description: 'Token để dùng cho bước reset password'
+ *                     expiresIn:
+ *                       type: string
+ *                       example: '15 phút'
+ *       400:
+ *         description: Email hoặc OTP không hợp lệ
+ *       410:
+ *         description: OTP đã hết hạn
+ */
+router.post(
+  "/forgot-password/verify-otp",
+  authController.verifyPasswordResetOTP,
+);
+
+/**
+ * @swagger
+ * /api/auth/forgot-password/reset-password:
+ *   post:
+ *     summary: Bước 3 - Đặt lại mật khẩu mới
+ *     description: |
+ *       Nhập mật khẩu mới sau khi đã xác thực OTP thành công.
+ *
+ *       Yêu cầu mật khẩu:
+ *       - Tối thiểu 8 ký tự
+ *       - Có ít nhất 1 chữ hoa
+ *       - Có ít nhất 1 chữ thường
+ *       - Có ít nhất 1 chữ số
+ *       - Có ít nhất 1 ký tự đặc biệt
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: ['resetToken', 'newPassword']
+ *             properties:
+ *               resetToken:
+ *                 type: string
+ *                 example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+ *                 description: 'Token nhận được từ bước verify OTP'
+ *               newPassword:
+ *                 type: string
+ *                 format: password
+ *                 example: 'NewSecure@123'
+ *                 description: 'Mật khẩu mới đủ mạnh'
+ *     responses:
+ *       200:
+ *         description: Đổi mật khẩu thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: 'Đổi mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.'
+ *       400:
+ *         description: Token hoặc mật khẩu không hợp lệ
+ *       410:
+ *         description: Token đã hết hạn hoặc đã được sử dụng
+ */
+router.post(
+  "/forgot-password/reset-password",
+  authController.resetPasswordWithOTP,
+);
+
 // Các API password management đã bị ẩn - Được quản lý bởi admin
 
 module.exports = router;

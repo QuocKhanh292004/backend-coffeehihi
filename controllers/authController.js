@@ -359,12 +359,193 @@ exports.logout = async (req, res) => {
   const correlationId = req.correlationId;
   const userId = req.user?.user_id;
 
-  logger.info('User logged out', {
+  logger.info("User logged out", {
     correlationId,
-    context: { userId }
+    context: { userId },
   });
 
-  return res.status(200).json(
-    responseUtil.success(req, 'Logout successful')
-  );
+  return res.status(200).json(responseUtil.success(req, "Logout successful"));
+};
+
+// ============================================================================
+// FORGOT PASSWORD WITH OTP CONTROLLERS
+// ============================================================================
+
+/**
+ * Bước 1: Request OTP - Gửi mã OTP qua email
+ * POST /api/auth/forgot-password/request-otp
+ * Body: { email }
+ */
+exports.requestPasswordResetOTP = async (req, res) => {
+  const { email } = req.body;
+  const correlationId = req.correlationId;
+
+  if (!email) {
+    logger.debug("Request OTP - email missing", { correlationId });
+    return res
+      .status(400)
+      .json(
+        responseUtil.validationError(req, "Email là bắt buộc", {
+          email: "Required",
+        }),
+      );
+  }
+
+  try {
+    const result = await authService.requestPasswordResetOTP(email);
+
+    logger.info("OTP request successful", {
+      correlationId,
+      context: { email },
+    });
+
+    return res.status(200).json(
+      responseUtil.success(req, result.message, {
+        email: result.email,
+        expiresIn: result.expiresIn,
+      }),
+    );
+  } catch (error) {
+    logger.error("Request OTP failed", {
+      correlationId,
+      context: { email },
+      error,
+    });
+
+    if (error.message.includes("không hợp lệ")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
+    }
+
+    if (error.message.includes("Không thể gửi email")) {
+      return res.status(503).json(responseUtil.error(req, error.message, 503));
+    }
+
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Không thể xử lý yêu cầu"));
+  }
+};
+
+/**
+ * Bước 2: Verify OTP - Xác thực mã OTP
+ * POST /api/auth/forgot-password/verify-otp
+ * Body: { email, otp }
+ */
+exports.verifyPasswordResetOTP = async (req, res) => {
+  const { email, otp } = req.body;
+  const correlationId = req.correlationId;
+
+  if (!email || !otp) {
+    logger.debug("Verify OTP - missing fields", { correlationId });
+    return res.status(400).json(
+      responseUtil.validationError(req, "Email và OTP là bắt buộc", {
+        email: !email ? "Required" : undefined,
+        otp: !otp ? "Required" : undefined,
+      }),
+    );
+  }
+
+  try {
+    const result = await authService.verifyPasswordResetOTP(email, otp);
+
+    logger.info("OTP verified successfully", {
+      correlationId,
+      context: { email },
+    });
+
+    return res.status(200).json(
+      responseUtil.success(req, result.message, {
+        resetToken: result.resetToken,
+        expiresIn: result.expiresIn,
+      }),
+    );
+  } catch (error) {
+    logger.error("OTP verification failed", {
+      correlationId,
+      context: { email },
+      error,
+    });
+
+    if (
+      error.message.includes("không hợp lệ") ||
+      error.message.includes("không tồn tại") ||
+      error.message.includes("phải là 6 chữ số")
+    ) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
+    }
+
+    if (error.message.includes("hết hạn")) {
+      return res.status(410).json(responseUtil.error(req, error.message, 410));
+    }
+
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Không thể xác thực OTP"));
+  }
+};
+
+/**
+ * Bước 3: Reset Password - Đổi mật khẩu mới
+ * POST /api/auth/forgot-password/reset-password
+ * Body: { resetToken, newPassword }
+ */
+exports.resetPasswordWithOTP = async (req, res) => {
+  const { resetToken, newPassword } = req.body;
+  const correlationId = req.correlationId;
+
+  if (!resetToken || !newPassword) {
+    logger.debug("Reset password - missing fields", { correlationId });
+    return res.status(400).json(
+      responseUtil.validationError(
+        req,
+        "Reset token và mật khẩu mới là bắt buộc",
+        {
+          resetToken: !resetToken ? "Required" : undefined,
+          newPassword: !newPassword ? "Required" : undefined,
+        },
+      ),
+    );
+  }
+
+  try {
+    const result = await authService.resetPasswordWithOTP(
+      resetToken,
+      newPassword,
+    );
+
+    logger.info("Password reset successful", {
+      correlationId,
+    });
+
+    return res.status(200).json(responseUtil.success(req, result.message));
+  } catch (error) {
+    logger.error("Password reset failed", {
+      correlationId,
+      error,
+    });
+
+    if (
+      error.message.includes("không đủ mạnh") ||
+      error.message.includes("không hợp lệ")
+    ) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
+    }
+
+    if (
+      error.message.includes("hết hạn") ||
+      error.message.includes("đã được sử dụng")
+    ) {
+      return res.status(410).json(responseUtil.error(req, error.message, 410));
+    }
+
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Không thể đổi mật khẩu"));
+  }
 };

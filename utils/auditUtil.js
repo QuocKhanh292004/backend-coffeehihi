@@ -34,7 +34,10 @@ exports.logAction = async (options) => {
   } catch (error) {
     // Don't throw error - audit logging should not break main operation
     logger.error('Failed to log audit action', {
-      context: { action, userId: options.userId },
+      context: {
+        action: options?.action,
+        userId: options?.userId
+      },
       error
     });
   }
