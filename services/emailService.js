@@ -61,11 +61,39 @@ Coffee Shop
     };
 
     const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent successfully:", info.messageId);
-    return { success: true, messageId: info.messageId };
+
+    const accepted = info.accepted || [];
+    const rejected = info.rejected || [];
+
+    // if (!accepted.includes(toEmail)) {
+    //   console.error("Email rejected by SMTP:", {
+    //     toEmail,
+    //     accepted,
+    //     rejected,
+    //     response: info.response,
+    //   });
+    //   throw new Error("SMTP không chấp nhận địa chỉ nhận email OTP");
+    // }
+
+    // console.log("Email sent successfully:", {
+    //   messageId: info.messageId,
+    //   accepted,
+    //   rejected,
+    //   response: info.response,
+    // });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      accepted,
+      rejected,
+      response: info.response,
+    };
   } catch (error) {
     console.error("Error sending email:", error);
-    throw new Error("Không thể gửi email. Vui lòng thử lại sau.");
+    throw new Error(
+      `Không thể gửi email OTP: ${error.message || "Vui lòng thử lại sau."}`,
+    );
   }
 };
 

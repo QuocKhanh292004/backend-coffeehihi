@@ -3,18 +3,20 @@
  * Register (customer/staff), Login, Password reset, Email verification
  */
 
-const db = require('../models');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const auditUtil = require('../utils/auditUtil');
-const tokenUtil = require('../utils/tokenUtil');
-const ridUtil = require('../utils/ridUtil');
-const validationUtil = require('../utils/validationUtil');
+const db = require("../models");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const auditUtil = require("../utils/auditUtil");
+const tokenUtil = require("../utils/tokenUtil");
+const ridUtil = require("../utils/ridUtil");
+const validationUtil = require("../utils/validationUtil");
+const emailService = require("./emailService");
 
 const { User, Role, PasswordResetToken, EmailVerificationToken } = db;
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key_change_in_production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET =
+  process.env.JWT_SECRET || "your_secret_key_change_in_production";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 // Generate JWT token
 const generateToken = (user, role = null) => {
@@ -24,11 +26,11 @@ const generateToken = (user, role = null) => {
       email: user.email,
       user_name: user.user_name,
       role_id: user.role_id,
-      role_name: role?.role_name || 'customer',
-      permissions: role?.permissions || {}
+      role_name: role?.role_name || "customer",
+      permissions: role?.permissions || {},
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: JWT_EXPIRES_IN },
   );
 };
 
@@ -36,11 +38,13 @@ const generateToken = (user, role = null) => {
 const getUserWithRole = async (userId) => {
   return await User.findOne({
     where: { user_id: userId },
-    include: [{
-      model: Role,
-      as: 'role',
-      attributes: ['role_id', 'role_name', 'permissions', 'is_active']
-    }]
+    include: [
+      {
+        model: Role,
+        as: "role",
+        attributes: ["role_id", "role_name", "permissions", "is_active"],
+      },
+    ],
   });
 };
 
@@ -51,7 +55,7 @@ const getUserWithRole = async (userId) => {
  */
 exports.register = async (data, authenticatedUser = null) => {
   const { user_name, password, email, role_id } = data;
-  
+
   // Determine mode
   const isAuthenticated = !!authenticatedUser;
   const userRole = authenticatedUser?.role_id;
@@ -449,6 +453,7 @@ exports.requestPasswordResetOTP = async (email) => {
   if (!user) {
     return {
       success: true,
+      email: email,
       message:
         "Nếu email tồn tại trong hệ thống, mã OTP đã được gửi đến email của bạn",
     };
@@ -490,6 +495,7 @@ exports.requestPasswordResetOTP = async (email) => {
     success: true,
     message: "Mã OTP đã được gửi đến email của bạn. Vui lòng kiểm tra hộp thư.",
     expiresIn: "5 phút",
+    email: email,
   };
 };
 

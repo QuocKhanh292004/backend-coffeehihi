@@ -11,7 +11,8 @@
     "docker:logs": "docker-compose logs -f mysql",
     "db:init": "node database/init.js",
     "db:seed": "node database/seed.js",
-    "db:migrate": "node database/migration.js"
+    "db:migrate": "node database/migration.js",
+    "test:email": "node test-email.js"
   },
   "keywords": [],
   "author": "",

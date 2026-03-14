@@ -401,6 +401,7 @@ exports.requestPasswordResetOTP = async (req, res) => {
 
     return res.status(200).json(
       responseUtil.success(req, result.message, {
+        email: result.email,
         expiresIn: result.expiresIn,
       }),
     );
