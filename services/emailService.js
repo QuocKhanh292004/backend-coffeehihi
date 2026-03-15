@@ -50,7 +50,7 @@ Coffee Shop
           <p>Bạn đã yêu cầu khôi phục mật khẩu cho tài khoản của mình.</p>
           <div style="background-color: #f0f0f0; padding: 15px; margin: 20px 0; text-align: center;">
             <p style="margin: 0; font-size: 14px;">Mã OTP của bạn:</p>
-            <h1 style="margin: 10px 0; color: #333; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
+            <h1 style="margin: 10px 0; font-size: 32px; letter-spacing: 5px;">${otp}</h1>
           </div>
           <p><strong>Lưu ý:</strong> Mã OTP này chỉ có hiệu lực trong <strong>5 phút</strong>.</p>
           <p style="color: #666; font-size: 12px;">Nếu bạn không yêu cầu khôi phục mật khẩu, vui lòng bỏ qua email này.</p>
@@ -141,5 +141,77 @@ Coffee Shop
     console.error("Error sending password reset success email:", error);
     // Không throw error vì đây chỉ là email thông báo, không ảnh hưởng logic chính
     return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Gửi OTP qua email cho đăng nhập 2FA
+ * @param {string} toEmail - Email người nhận
+ * @param {string} otp - Mã OTP 6 số
+ * @param {string} userName - Tên người dùng
+ */
+exports.sendLoginOTP = async (toEmail, otp, userName = "Quý khách") => {
+  try {
+    const transporter = createTransporter();
+
+    const mailOptions = {
+      from: `"Coffee Shop" <${process.env.EMAIL_USER}>`,
+      to: toEmail,
+      subject: "Mã OTP đăng nhập - Coffee Shop",
+      text: `
+Xin chào ${userName},
+
+Bạn vừa yêu cầu đăng nhập vào tài khoản Coffee Shop của mình.
+
+Mã OTP xác minh của bạn là: ${otp}
+
+Lưu ý: Mã OTP này chỉ có hiệu lực trong 5 phút. Vì lý do bảo mật, không bao giờ chia sẻ mã này với bất kỳ ai.
+
+Nếu bạn không yêu cầu đăng nhập, vui lòng bỏ qua email này hoặc liên hệ hỗ trợ ngay.
+
+---
+Coffee Shop
+© 2026
+      `,
+      html: `
+        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+          <div style="background-color: #f5f5f5; padding: 20px; border-radius: 5px;">
+            <h2 style="color: #333;">Xin chào ${userName},</h2>
+            <p style="color: #666;">Bạn vừa yêu cầu đăng nhập vào tài khoản Coffee Shop của mình.</p>
+            
+            <div style="background-color: #fff; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; border: 2px solid #ddd;">
+              <p style="color: #999; margin: 0; font-size: 12px;">Mã OTP của bạn</p>
+              <h1 style="color: #d4a574; margin: 10px 0 0 0; letter-spacing: 5px; font-family: 'Courier New', monospace;">
+                ${otp}
+              </h1>
+            </div>
+            
+            <p style="color: #d9534f; padding: 10px; background-color: #f2dede; border-radius: 5px;">
+              ⏱️ Mã OTP này chỉ có hiệu lực trong <strong>5 phút</strong>
+            </p>
+            
+            <p style="color: #d9534f; padding: 10px; background-color: #f2dede; border-radius: 5px;">
+              ⚠️ Vì lý do bảo mật, không bao giờ chia sẻ mã này với bất kỳ ai.
+            </p>
+            
+            <p style="color: #666; margin-top: 20px;">
+              Nếu bạn không yêu cầu đăng nhập, vui lòng bỏ qua email này hoặc <a href="mailto:support@coffee.com" style="color: #d4a574;">liên hệ hỗ trợ</a> ngay.
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #ddd; margin: 20px 0;">
+            <p style="color: #999; font-size: 11px;">Coffee Shop © 2026</p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Login OTP email sent:", info.messageId);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error("Error sending login OTP email:", error);
+    throw new Error(
+      `Không thể gửi email OTP: ${error.message || "Vui lòng thử lại sau."}`,
+    );
   }
 };
