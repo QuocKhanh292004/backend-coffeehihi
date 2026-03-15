@@ -1,13 +1,13 @@
 /** Authentication Controller - Register, login, token management */
 
-const logger = require('../middleware/logger');
-const responseUtil = require('../utils/responseUtil');
-const { authService } = require('../services');
-const jwt = require('jsonwebtoken');
-const db = require('../models');
+const logger = require("../middleware/logger");
+const responseUtil = require("../utils/responseUtil");
+const { authService } = require("../services");
+const jwt = require("jsonwebtoken");
+const db = require("../models");
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 
 const { User, Role } = db;
 
@@ -20,146 +20,166 @@ exports.register = async (req, res) => {
     const result = await authService.register(req.body, req.user);
 
     // Determine message based on mode
-    const mode = req.user ? 'Staff account created' : 'Customer registered';
-    
+    const mode = req.user ? "Staff account created" : "Customer registered";
+
     logger.info(`${mode} successfully`, {
       correlationId,
       context: {
         userId: result.user.user_id,
         email: result.user.email,
-        role_id: result.user.role_id
-      }
+        role_id: result.user.role_id,
+      },
     });
 
-    return res.status(201).json(
-      responseUtil.success(req, `${mode} successfully`, result, 201)
-    );
+    return res
+      .status(201)
+      .json(responseUtil.success(req, `${mode} successfully`, result, 201));
   } catch (error) {
-    logger.error('Registration failed', {
+    logger.error("Registration failed", {
       correlationId,
       context: { email: req.body.email, user_name: req.body.user_name },
-      error
+      error,
     });
 
     // Handle specific error types
-    if (error.message.includes('Missing required fields')) {
-      return res.status(400).json(
-        responseUtil.validationError(req, error.message)
-      );
+    if (error.message.includes("Missing required fields")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
     }
-    if (error.message.includes('Invalid email')) {
-      return res.status(400).json(
-        responseUtil.validationError(req, error.message)
-      );
+    if (error.message.includes("Invalid email")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
     }
-    if (error.message.includes('Invalid role')) {
-      return res.status(400).json(
-        responseUtil.validationError(req, error.message)
-      );
+    if (error.message.includes("Invalid role")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
     }
-    if (error.message.includes('Password does not meet')) {
-      return res.status(400).json(
-        responseUtil.validationError(req, error.message)
-      );
+    if (error.message.includes("Password does not meet")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
     }
-    if (error.message.includes('Email is already registered')) {
-      return res.status(409).json(
-        responseUtil.conflict(req, error.message)
-      );
+    if (error.message.includes("Email is already registered")) {
+      return res.status(409).json(responseUtil.conflict(req, error.message));
     }
-    if (error.message.includes('Only admin/manager')) {
-      return res.status(403).json(
-        responseUtil.forbidden(req, error.message)
-      );
+    if (error.message.includes("Only admin/manager")) {
+      return res.status(403).json(responseUtil.forbidden(req, error.message));
     }
 
-    return res.status(500).json(
-      responseUtil.serverError(req, 'Failed to register user')
-    );
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Failed to register user"));
   }
 };
 
 /**
  * User login with credentials
+ * Support both traditional login and 2FA OTP login
+ * @param use2FA - boolean, if true use 2FA flow (optional, default: false)
  */
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, use2FA } = req.body;
   const correlationId = req.correlationId;
 
   try {
+    // If use2FA is true, use the new 2FA flow
+    if (use2FA === true) {
+      const result = await authService.loginStep1(email, password);
+
+      logger.info("Login Step 1 (2FA) - OTP sent", {
+        correlationId,
+        context: { userId: result.user.user_id, email },
+      });
+
+      return res
+        .status(200)
+        .json(responseUtil.success(req, result.message, result));
+    }
+
+    // Otherwise use traditional login
     const result = await authService.login(email, password);
 
-    logger.info('User logged in successfully', {
+    logger.info("User logged in successfully", {
       correlationId,
-      context: { userId: result.user.user_id, email }
+      context: { userId: result.user.user_id, email },
     });
 
-    return res.status(200).json(
-      responseUtil.success(req, 'Login successful', result)
-    );
+    return res
+      .status(200)
+      .json(responseUtil.success(req, "Login successful", result));
   } catch (error) {
-    logger.error('Login failed', {
+    logger.error("Login failed", {
       correlationId,
       context: { email },
-      error
+      error,
     });
 
-    if (error.message.includes('locked')) {
-      return res.status(401).json(
-        responseUtil.unauthorized(req, error.message)
-      );
+    if (error.message.includes("locked")) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
     }
-    if (error.message.includes('incorrect')) {
-      return res.status(401).json(
-        responseUtil.unauthorized(req, error.message)
-      );
+    if (error.message.includes("incorrect")) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
     }
-    
-    return res.status(500).json(
-      responseUtil.serverError(req, 'Login failed')
-    );
+    if (error.message.includes("không hợp lệ")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
+    }
+
+    return res.status(500).json(responseUtil.serverError(req, "Login failed"));
   }
 };
 
 // Verify JWT token validity
 exports.verifyTokenEndpoint = async (req, res) => {
-  const token = req.body.token || req.headers.authorization?.split(' ')[1];
+  const token = req.body.token || req.headers.authorization?.split(" ")[1];
   const correlationId = req.correlationId;
 
   if (!token) {
-    logger.debug('Token verification - token missing', { correlationId });
-    return res.status(400).json(
-      responseUtil.validationError(req, 'Token is required', { token: 'Required' })
-    );
+    logger.debug("Token verification - token missing", { correlationId });
+    return res
+      .status(400)
+      .json(
+        responseUtil.validationError(req, "Token is required", {
+          token: "Required",
+        }),
+      );
   }
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    logger.debug('Token verified successfully', {
+    logger.debug("Token verified successfully", {
       correlationId,
-      context: { userId: decoded.user_id, email: decoded.email }
+      context: { userId: decoded.user_id, email: decoded.email },
     });
     return res.status(200).json(
-      responseUtil.success(req, 'Token is valid', {
+      responseUtil.success(req, "Token is valid", {
         user_id: decoded.user_id,
         email: decoded.email,
         user_name: decoded.user_name,
         role_id: decoded.role_id,
         role_name: decoded.role_name,
-        permissions: decoded.permissions
-      })
+        permissions: decoded.permissions,
+      }),
     );
   } catch (error) {
-    if (error.name === 'TokenExpiredError') {
-      logger.debug('Token verification - token expired', { correlationId });
-      return res.status(401).json(
-        responseUtil.unauthorized(req, 'Token has expired')
-      );
+    if (error.name === "TokenExpiredError") {
+      logger.debug("Token verification - token expired", { correlationId });
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, "Token has expired"));
     }
-    logger.debug('Token verification - invalid token', { correlationId });
-    return res.status(401).json(
-      responseUtil.unauthorized(req, 'Token is invalid')
-    );
+    logger.debug("Token verification - invalid token", { correlationId });
+    return res
+      .status(401)
+      .json(responseUtil.unauthorized(req, "Token is invalid"));
   }
 };
 
@@ -169,10 +189,14 @@ exports.refreshToken = async (req, res) => {
   const correlationId = req.correlationId;
 
   if (!refreshToken) {
-    logger.debug('Token refresh - token missing', { correlationId });
-    return res.status(400).json(
-      responseUtil.validationError(req, 'Refresh token is required', { refreshToken: 'Required' })
-    );
+    logger.debug("Token refresh - token missing", { correlationId });
+    return res
+      .status(400)
+      .json(
+        responseUtil.validationError(req, "Refresh token is required", {
+          refreshToken: "Required",
+        }),
+      );
   }
 
   try {
@@ -181,55 +205,61 @@ exports.refreshToken = async (req, res) => {
     // Get fresh user data with role
     const user = await User.findOne({
       where: { user_id: decoded.user_id },
-      attributes: { exclude: ['password'] },
-      include: [{
-        model: Role,
-        as: 'role',
-        attributes: ['role_id', 'role_name', 'permissions', 'is_active']
-      }]
+      attributes: { exclude: ["password"] },
+      include: [
+        {
+          model: Role,
+          as: "role",
+          attributes: ["role_id", "role_name", "permissions", "is_active"],
+        },
+      ],
     });
 
     if (!user || user.lock_up) {
-      logger.warn('Token refresh - user not found or locked', {
+      logger.warn("Token refresh - user not found or locked", {
         correlationId,
-        context: { userId: decoded.user_id }
+        context: { userId: decoded.user_id },
       });
-      return res.status(401).json(
-        responseUtil.unauthorized(req, 'User not found or account is locked')
-      );
+      return res
+        .status(401)
+        .json(
+          responseUtil.unauthorized(req, "User not found or account is locked"),
+        );
     }
 
     // Check if role is still active
     if (user.role && !user.role.is_active) {
-      logger.warn('Token refresh - role is inactive', {
+      logger.warn("Token refresh - role is inactive", {
         correlationId,
-        context: { userId: user.user_id, roleId: user.role_id }
+        context: { userId: user.user_id, roleId: user.role_id },
       });
-      return res.status(403).json(
-        responseUtil.forbidden(req, 'Your role is no longer active')
-      );
+      return res
+        .status(403)
+        .json(responseUtil.forbidden(req, "Your role is no longer active"));
     }
 
     const newToken = generateToken(user, user.role);
-    logger.info('Token refreshed successfully', {
+    logger.info("Token refreshed successfully", {
       correlationId,
-      context: { userId: user.user_id }
+      context: { userId: user.user_id },
     });
 
     return res.status(200).json(
-      responseUtil.success(req, 'Token refreshed successfully', {
+      responseUtil.success(req, "Token refreshed successfully", {
         token: newToken,
-        expiresIn: JWT_EXPIRES_IN
-      })
+        expiresIn: JWT_EXPIRES_IN,
+      }),
     );
   } catch (error) {
-    logger.debug('Token refresh failed - invalid token', {
+    logger.debug("Token refresh failed - invalid token", {
       correlationId,
-      context: { error: error.message }
+      context: { error: error.message },
     });
-    return res.status(401).json(
-      responseUtil.unauthorized(req, 'Refresh token is invalid or expired')
-    );
+    return res
+      .status(401)
+      .json(
+        responseUtil.unauthorized(req, "Refresh token is invalid or expired"),
+      );
   }
 };
 
@@ -239,50 +269,50 @@ exports.getCurrentUser = async (req, res) => {
   const userId = req.user?.user_id;
 
   if (!userId) {
-    logger.warn('Get current user - no user ID in token', { correlationId });
-    return res.status(401).json(
-      responseUtil.unauthorized(req, 'Unable to identify user')
-    );
+    logger.warn("Get current user - no user ID in token", { correlationId });
+    return res
+      .status(401)
+      .json(responseUtil.unauthorized(req, "Unable to identify user"));
   }
 
   try {
     const user = await User.findOne({
       where: { user_id: userId },
-      attributes: { exclude: ['password'] },
-      include: [{
-        model: Role,
-        as: 'role',
-        attributes: ['role_id', 'role_name', 'permissions', 'is_active']
-      }]
+      attributes: { exclude: ["password"] },
+      include: [
+        {
+          model: Role,
+          as: "role",
+          attributes: ["role_id", "role_name", "permissions", "is_active"],
+        },
+      ],
     });
 
     if (!user) {
-      logger.warn('Get current user - user not found', {
+      logger.warn("Get current user - user not found", {
         correlationId,
-        context: { userId }
+        context: { userId },
       });
-      return res.status(404).json(
-        responseUtil.notFound(req, 'User')
-      );
+      return res.status(404).json(responseUtil.notFound(req, "User"));
     }
 
-    logger.debug('Current user profile retrieved', {
-      correlationId,
-      context: { userId }
-    });
-
-    return res.status(200).json(
-      responseUtil.success(req, 'User profile retrieved', user)
-    );
-  } catch (error) {
-    logger.error('Failed to get current user', {
+    logger.debug("Current user profile retrieved", {
       correlationId,
       context: { userId },
-      error
     });
-    return res.status(500).json(
-      responseUtil.serverError(req, 'Failed to retrieve user profile')
-    );
+
+    return res
+      .status(200)
+      .json(responseUtil.success(req, "User profile retrieved", user));
+  } catch (error) {
+    logger.error("Failed to get current user", {
+      correlationId,
+      context: { userId },
+      error,
+    });
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Failed to retrieve user profile"));
   }
 };
 
@@ -293,64 +323,73 @@ exports.checkPermission = async (req, res) => {
   const { permission } = req.body;
 
   if (!permission) {
-    logger.debug('Check permission - permission name missing', { correlationId });
-    return res.status(400).json(
-      responseUtil.validationError(req, 'Permission name is required', { permission: 'Required' })
-    );
+    logger.debug("Check permission - permission name missing", {
+      correlationId,
+    });
+    return res
+      .status(400)
+      .json(
+        responseUtil.validationError(req, "Permission name is required", {
+          permission: "Required",
+        }),
+      );
   }
 
   if (!userId) {
-    logger.warn('Check permission - no user ID', { correlationId });
-    return res.status(401).json(
-      responseUtil.unauthorized(req)
-    );
+    logger.warn("Check permission - no user ID", { correlationId });
+    return res.status(401).json(responseUtil.unauthorized(req));
   }
 
   try {
     const user = await User.findOne({
       where: { user_id: userId },
-      include: [{
-        model: Role,
-        as: 'role',
-        attributes: ['role_name', 'permissions', 'is_active']
-      }]
+      include: [
+        {
+          model: Role,
+          as: "role",
+          attributes: ["role_name", "permissions", "is_active"],
+        },
+      ],
     });
 
     if (!user || !user.role) {
-      logger.warn('Check permission - user or role not found', {
+      logger.warn("Check permission - user or role not found", {
         correlationId,
-        context: { userId }
+        context: { userId },
       });
-      return res.status(404).json(
-        responseUtil.notFound(req, 'User or Role')
-      );
+      return res.status(404).json(responseUtil.notFound(req, "User or Role"));
     }
 
     const permissions = user.role.permissions || {};
     const hasPermission = permissions[permission] === true;
 
-    logger.debug('Permission checked', {
+    logger.debug("Permission checked", {
       correlationId,
-      context: { userId, permission, hasPermission, roleName: user.role.role_name }
+      context: {
+        userId,
+        permission,
+        hasPermission,
+        roleName: user.role.role_name,
+      },
     });
 
     return res.status(200).json(
-      responseUtil.success(req, 'Permission checked', {
+      responseUtil.success(req, "Permission checked", {
         user_id: userId,
         permission,
         has_permission: hasPermission,
-        role_name: user.role.role_name
-      })
+        role_name: user.role.role_name,
+      }),
     );
   } catch (error) {
-    logger.error('Permission check failed', {
+    logger.error("Permission check failed", {
       correlationId,
       context: { userId, permission },
-      error
+      error,
     });
-    return res.status(500).json(
-      responseUtil.serverError(req, 'Failed to check permission')
-    );
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Failed to check permission"));
   }
 };
 
@@ -382,13 +421,11 @@ exports.requestPasswordResetOTP = async (req, res) => {
 
   if (!email) {
     logger.debug("Request OTP - email missing", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Email là bắt buộc", {
-          email: "Required",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Email là bắt buộc", {
+        email: "Required",
+      }),
+    );
   }
 
   try {
@@ -547,5 +584,236 @@ exports.resetPasswordWithOTP = async (req, res) => {
     return res
       .status(500)
       .json(responseUtil.serverError(req, "Không thể đổi mật khẩu"));
+  }
+};
+
+// ============================================================================
+// 2FA LOGIN WITH OTP - NEW ENDPOINTS
+// ============================================================================
+
+/**
+ * LOGIN STEP 1: Verify email + password and send OTP
+ */
+exports.loginStep1 = async (req, res) => {
+  const { email, password } = req.body;
+  const correlationId = req.correlationId;
+
+  try {
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json(
+        responseUtil.validationError(req, "Email và mật khẩu là bắt buộc", {
+          email: email ? null : "Required",
+          password: password ? null : "Required",
+        }),
+      );
+    }
+
+    const result = await authService.loginStep1(email, password);
+
+    logger.info("Login Step 1 - OTP sent successfully", {
+      correlationId,
+      context: { userId: result.user.user_id, email },
+    });
+
+    return res
+      .status(200)
+      .json(responseUtil.success(req, result.message, result));
+  } catch (error) {
+    logger.error("Login Step 1 failed", {
+      correlationId,
+      context: { email },
+      error,
+    });
+
+    if (error.message.includes("locked")) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
+    }
+    if (error.message.includes("incorrect")) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
+    }
+    if (error.message.includes("không hợp lệ")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
+    }
+
+    return res
+      .status(500)
+      .json(
+        responseUtil.serverError(
+          req,
+          "Thông tin tài khoản và mật khẩu không chính xác",
+        ),
+      );
+  }
+};
+
+/**
+ * LOGIN STEP 2: Verify OTP and generate JWT token
+ */
+exports.loginStep2 = async (req, res) => {
+  const { user_id, otp_code } = req.body;
+  const correlationId = req.correlationId;
+
+  try {
+    // Validate input
+    if (!user_id || !otp_code) {
+      return res.status(400).json(
+        responseUtil.validationError(req, "User ID và OTP là bắt buộc", {
+          user_id: user_id ? null : "Required",
+          otp_code: otp_code ? null : "Required",
+        }),
+      );
+    }
+
+    const result = await authService.loginStep2(user_id, otp_code);
+
+    logger.info("Login Step 2 - OTP verified successfully", {
+      correlationId,
+      context: { userId: result.user.user_id, email: result.user.email },
+    });
+
+    return res
+      .status(200)
+      .json(responseUtil.success(req, result.message, result));
+  } catch (error) {
+    logger.error("Login Step 2 failed", {
+      correlationId,
+      context: { user_id },
+      error,
+    });
+
+    if (error.message.includes("không tồn tại")) {
+      return res.status(404).json(responseUtil.notFound(req, error.message));
+    }
+    if (error.message.includes("locked")) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
+    }
+    if (
+      error.message.includes("không hợp lệ") ||
+      error.message.includes("hết hạn") ||
+      error.message.includes("sai quá nhiều")
+    ) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
+    }
+
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Không thể xác minh OTP"));
+  }
+};
+
+/**
+ * RESEND OTP: For user who didn't receive OTP in Step 1
+ */
+exports.resendLoginOTP = async (req, res) => {
+  const { email } = req.body;
+  const correlationId = req.correlationId;
+
+  try {
+    if (!email) {
+      return res.status(400).json(
+        responseUtil.validationError(req, "Email là bắt buộc", {
+          email: "Required",
+        }),
+      );
+    }
+
+    const result = await authService.resendLoginOTP(email);
+
+    logger.info("Login OTP resent successfully", {
+      correlationId,
+      context: { email },
+    });
+
+    return res
+      .status(200)
+      .json(responseUtil.success(req, result.message, result));
+  } catch (error) {
+    logger.error("Resend login OTP failed", {
+      correlationId,
+      context: { email },
+      error,
+    });
+
+    if (error.message.includes("không tồn tại")) {
+      return res.status(404).json(responseUtil.notFound(req, error.message));
+    }
+    if (error.message.includes("không có email")) {
+      return res
+        .status(400)
+        .json(responseUtil.validationError(req, error.message));
+    }
+    if (
+      error.message.includes("Vui lòng chờ") ||
+      error.message.includes("Vui lòng đợi")
+    ) {
+      return res.status(429).json(responseUtil.error(req, error.message, 429));
+    }
+
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Không thể gửi lại OTP"));
+  }
+};
+/**
+ * VERIFY OTP: Verify OTP and generate JWT token using email instead of user_id
+ */
+exports.verifyOTP = async (req, res) => {
+  const { email, otp_code } = req.body;
+  const correlationId = req.correlationId;
+  try {
+    // Validate input
+    if (!email || !otp_code) {
+      return res.status(400).json(
+        responseUtil.validationError(req, "Email và OTP là bắt buộc", {
+          email: email ? null : "Required",
+          otp_code: otp_code ? null : "Required",
+        }),
+      );
+    }
+    const result = await authService.loginStep2(email, otp_code);
+    logger.info("Verify OTP - OTP verified successfully", {
+      correlationId,
+      context: { userId: result.user.user_id, email: result.user.email },
+    });
+    return res
+      .status(200)
+      .json(responseUtil.success(req, result.message, result));
+  } catch (error) {
+    logger.error("Verify OTP failed", {
+      correlationId,
+      context: { email },
+      error,
+    });
+    if (error.message.includes("không tồn tại")) {
+      return res.status(404).json(responseUtil.notFound(req, error.message));
+    }
+    if (error.message.includes("locked")) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
+    }
+    if (
+      error.message.includes("không hợp lệ") ||
+      error.message.includes("hết hạn") ||
+      error.message.includes("sai quá nhiều")
+    ) {
+      return res
+        .status(401)
+        .json(responseUtil.unauthorized(req, error.message));
+    }
+    return res
+      .status(500)
+      .json(responseUtil.serverError(req, "Không thể xác minh OTP"));
   }
 };

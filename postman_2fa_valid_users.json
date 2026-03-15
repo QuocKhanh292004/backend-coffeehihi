@@ -1,0 +1,218 @@
+{
+  "info": {
+    "name": "2FA Login - Valid Database Users",
+    "description": "2FA login tests using actual users from coffee_db database",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Traditional Login - Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Traditional login with admin account - No OTP needed"
+      },
+      "response": []
+    },
+    {
+      "name": "2. 2FA Step 1 - Request OTP - Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/step1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "step1"]
+        },
+        "description": "2FA Step 1 - Request OTP with admin account. Check email for OTP code."
+      },
+      "response": []
+    },
+    {
+      "name": "3. 2FA Step 2 - Verify OTP - Admin",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 1,\n  \"otp_code\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/step2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "step2"]
+        },
+        "description": "2FA Step 2 - Verify OTP (replace 123456 with actual OTP from email)"
+      },
+      "response": []
+    },
+    {
+      "name": "4. 2FA Step 1 - Manager Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"manager1@restaurant.com\",\n  \"password\": \"Manager@123456\",\n  \"use2FA\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/step1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "step1"]
+        },
+        "description": "Test with manager account - Replace password if different in seed data"
+      },
+      "response": []
+    },
+    {
+      "name": "5. 2FA Step 1 - Customer Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"customer1@email.com\",\n  \"password\": \"Customer@123456\",\n  \"use2FA\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/step1",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "step1"]
+        },
+        "description": "Test with customer account - Replace password if different in seed data"
+      },
+      "response": []
+    },
+    {
+      "name": "6. Test - Wrong Password",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"WrongPassword@123456\",\n  \"use2FA\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Test error handling - Should get 401 Unauthorized"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Test - Non-existent User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"nonexistent@email.com\",\n  \"password\": \"SomePassword@123456\",\n  \"use2FA\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Test with non-existent email - Should show same error as wrong password for security"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/resend-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "resend-otp"]
+        },
+        "description": "Resend OTP - Rate limited to 30 seconds between resends"
+      },
+      "response": []
+    }
+  ]
+}
+

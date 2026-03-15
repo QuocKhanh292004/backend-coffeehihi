@@ -1,0 +1,230 @@
+{
+  "info": {
+    "name": "2FA + Traditional Login Integration",
+    "description": "Complete test collection for both Traditional and 2FA login methods",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Traditional Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Traditional login - Single step, get JWT token directly"
+      },
+      "response": []
+    },
+    {
+      "name": "2. 2FA Step 1 - Request OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "2FA Step 1 - Verify email+password, send OTP to email"
+      },
+      "response": []
+    },
+    {
+      "name": "3. 2FA Step 2 - Verify OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 1,\n  \"otp_code\": \"123456\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/step2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "step2"]
+        },
+        "description": "2FA Step 2 - Verify OTP and get JWT token (check email for OTP code first)"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Resend OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/resend-otp",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "resend-otp"]
+        },
+        "description": "Resend OTP - Rate limited to 30 seconds between resends"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Traditional with Wrong Password (Test Lock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"WrongPassword\",\n  \"use2FA\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Test wrong password - Increment login_attempt. Run this 5 times to lock account"
+      },
+      "response": []
+    },
+    {
+      "name": "6. 2FA Step 1 with Wrong Password (Test Lock)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"customer1@email.com\",\n  \"password\": \"WrongPassword\",\n  \"use2FA\": true\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Test 2FA with wrong password - Increment login_attempt (shared). Run this 5 times to lock account"
+      },
+      "response": []
+    },
+    {
+      "name": "7. Test Shared Lock - Try Login After Lock",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": false\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Test after account is locked - Should get 'Account is locked' error. Both Traditional and 2FA will be blocked"
+      },
+      "response": []
+    },
+    {
+      "name": "8. Test 2FA Step 2 with Wrong OTP",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"user_id\": 2,\n  \"otp_code\": \"000000\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3000/api/auth/login/step2",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3000",
+          "path": ["api", "auth", "login", "step2"]
+        },
+        "description": "Test with wrong OTP - Increment OTP attempt_count. Run this 5 times to disable OTP"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "user_id",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}
+

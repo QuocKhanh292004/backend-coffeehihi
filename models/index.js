@@ -27,6 +27,10 @@ db.EmailVerificationToken = require("./email_verification_token")(
   sequelize,
   Sequelize.DataTypes,
 );
+db.OTPLoginToken = require("./otp_login_token")(
+  sequelize,
+  Sequelize.DataTypes,
+);
 db.AuditLog = require("./audit_log")(sequelize, Sequelize.DataTypes);
 
 // =============================================================================
@@ -106,5 +110,9 @@ db.Order.belongsTo(db.Table, { foreignKey: "table_id" });
 // User - Notification (1-n)
 db.User.hasMany(db.Notification, { foreignKey: "user_id" });
 db.Notification.belongsTo(db.User, { foreignKey: "user_id" });
+
+// User - OTPLoginToken (1-n)
+db.User.hasMany(db.OTPLoginToken, { foreignKey: "user_id", onDelete: "CASCADE" });
+db.OTPLoginToken.belongsTo(db.User, { foreignKey: "user_id" });
 
 module.exports = db;

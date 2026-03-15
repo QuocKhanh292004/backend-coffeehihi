@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Authentication Service - User auth operations
  * Register (customer/staff), Login, Password reset, Email verification
  */
@@ -12,7 +12,8 @@ const ridUtil = require("../utils/ridUtil");
 const validationUtil = require("../utils/validationUtil");
 const emailService = require("./emailService");
 
-const { User, Role, PasswordResetToken, EmailVerificationToken } = db;
+const { User, Role, PasswordResetToken, EmailVerificationToken, OTPLoginToken } =
+  db;
 
 const JWT_SECRET =
   process.env.JWT_SECRET || "your_secret_key_change_in_production";
@@ -632,12 +633,10 @@ exports.resetPasswordWithOTP = async (resetToken, newPassword) => {
     message: "Password reset successfully via OTP",
   });
 
-  // Gửi email thông báo đổi mật khẩu thành công
   try {
     await emailService.sendPasswordResetSuccess(user.email, user.user_name);
   } catch (error) {
     console.error("Error sending password reset success email:", error);
-    // Không throw error vì mật khẩu đã đổi thành công
   }
 
   return {
@@ -645,3 +644,297 @@ exports.resetPasswordWithOTP = async (resetToken, newPassword) => {
     message: "Đổi mật khẩu thành công. Bạn có thể đăng nhập với mật khẩu mới.",
   };
 };
+
+// ============================================================================
+// 2FA LOGIN WITH OTP - NEW IMPLEMENTATION
+// ============================================================================
+
+/**
+ * LOGIN STEP 1: Verify email + password, generate and send OTP
+ * @param {string} email - User email
+ * @param {string} password - User password
+ * @returns {object} Contains user info and message about OTP sent
+ */
+exports.loginStep1 = async (email, password) => {
+  // Validate input
+  if (!email || !password) {
+    throw new Error("Email không hợp lệ");
+  }
+
+  if (!validationUtil.isValidEmail(email)) {
+    throw new Error("Email không hợp lệ");
+  }
+
+  // Find user
+  const user = await User.findOne({ where: { email } });
+
+  if (!user) {
+    throw new Error("Email hoặc mật khẩu không chính xác");
+  }
+
+  // Check if account is locked
+  if (user.lock_up) {
+    throw new Error("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên");
+  }
+
+  // Verify password
+  const isPasswordValid = await bcrypt.compare(password, user.password);
+  if (!isPasswordValid) {
+    // Increment login attempt
+    user.login_attempt = (user.login_attempt || 0) + 1;
+
+    // Lock account after 5 attempts
+    if (user.login_attempt >= 5) {
+      user.lock_up = true;
+      user.lock_up_at = new Date();
+    }
+
+    await user.save();
+    throw new Error("Email hoặc mật khẩu không chính xác");
+  }
+
+  // Password is correct - generate OTP
+  const otp = generateOTP();
+
+  // Calculate expiry (5 minutes)
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+
+  // Delete old unused OTP for this user
+  await OTPLoginToken.destroy({
+    where: {
+      user_id: user.user_id,
+      is_verified: false,
+    },
+  });
+
+  // Save OTP to database
+  await OTPLoginToken.create({
+    user_id: user.user_id,
+    otp_code: otp,
+    expires_at: expiresAt,
+    is_verified: false,
+    attempt_count: 0,
+    max_attempts: 5,
+  });
+
+  // Send OTP via email
+  try {
+    await emailService.sendLoginOTP(email, otp, user.user_name);
+  } catch (error) {
+    console.error("Error sending login OTP email:", error);
+    throw new Error("Không thể gửi OTP. Vui lòng thử lại sau.");
+  }
+
+  // Reset login attempts on successful email+password verification
+  if (user.login_attempt > 0) {
+    user.login_attempt = 0;
+  }
+  user.last_login = new Date();
+  await user.save();
+
+  return {
+    success: true,
+    message: "Mã OTP đã được gửi đến email của bạn",
+    user: {
+      user_id: user.user_id,
+      user_name: user.user_name,
+      email: user.email,
+      role_id: user.role_id,
+    },
+    otp_expires_in: "5 phÃºt",
+  };
+};
+
+/**
+ * LOGIN STEP 2: Verify OTP and generate JWT token
+ * @param {number} userId - User ID from Step 1
+ * @param {string} otpCode - OTP code from email
+ * @returns {object} Contains JWT token and user info
+ */
+
+exports.loginStep2 = async (emailOrUserId, otpCode) => {
+  // Validate input
+  if (!emailOrUserId || !otpCode) {
+    throw new Error("Email/User ID và OTP là bắt buộc");
+  }
+  if (otpCode.length !== 6 || !/^\d{6}$/.test(otpCode)) {
+    throw new Error("OTP phải là 6 chữ số");
+  }
+  // Find user by email or user_id
+  let user;
+  if (typeof emailOrUserId === 'string' && emailOrUserId.includes('@')) {
+    // It's an email
+    user = await User.findOne({ where: { email: emailOrUserId } });
+  } else {
+    // It's a user_id
+    user = await User.findOne({ where: { user_id: emailOrUserId } });
+  }
+  if (!user) {
+    throw new Error("Người dùng không tồn tại");
+  }
+  // Check if account is locked
+  if (user.lock_up) {
+    throw new Error("Tài khoản đã bị khóa");
+  }
+  // Find valid OTP
+  const otpRecord = await OTPLoginToken.findOne({
+    where: {
+      user_id: user.user_id,
+      otp_code: otpCode,
+      is_verified: false,
+    },
+    order: [["created_at", "DESC"]],
+  });
+  if (!otpRecord) {
+    throw new Error("OTP không hợp lệ hoặc đã được sử dụng");
+  }
+  // Check if OTP is expired
+  if (new Date() > otpRecord.expires_at) {
+    // Mark as expired
+    otpRecord.is_verified = true;
+    await otpRecord.save();
+    throw new Error("OTP đã hết hạn. Vui lòng yêu cầu OTP mới.");
+  }
+  // Check max attempts
+  if (otpRecord.attempt_count >= otpRecord.max_attempts) {
+    throw new Error(
+      "Bạn đã nhập sai quá nhiều lần. OTP đã bị vô hiệu hóa. Vui lòng thử đăng nhập lại."
+    );
+  }
+  // Increment attempt count
+  otpRecord.attempt_count += 1;
+  await otpRecord.save();
+  // OTP is valid - mark as verified
+  otpRecord.is_verified = true;
+  otpRecord.verified_at = new Date();
+  await otpRecord.save();
+  // Get user with role
+  const userWithRole = await getUserWithRole(user.user_id);
+  // Generate JWT token
+  const token = generateToken(user, userWithRole.role);
+  // Log successful login
+  await auditUtil.logAction(user.user_id, "login", {
+    message: "User logged in via 2FA OTP",
+    email: user.email,
+  });
+  return {
+    success: true,
+    message: "Đăng nhập thành công",
+    user: {
+      user_id: user.user_id,
+      user_name: user.user_name,
+      email: user.email,
+      role_id: user.role_id,
+      role: userWithRole.role,
+    },
+    token,
+    expiresIn: JWT_EXPIRES_IN,
+  };
+};
+/**
+ * Resend OTP - For user who didn't receive OTP in Step 1
+ * @param {string|number} emailOrUserId - Email or User ID
+ * @returns {object} Contains message about OTP resent
+ */
+exports.resendLoginOTP = async (emailOrUserId) => {
+  // Find user by email or user_id
+  let user;
+  if (typeof emailOrUserId === 'string' && emailOrUserId.includes('@')) {
+    // It's an email
+    user = await User.findOne({ where: { email: emailOrUserId } });
+  } else {
+    // It's a user_id
+    user = await User.findOne({ where: { user_id: emailOrUserId } });
+  }
+
+  if (!user) {
+    throw new Error("Người dùng không tồn tại");
+  }
+
+  if (!user.email) {
+    throw new Error("Tài khoản này không có email");
+  }
+
+  // Find pending OTP for this user
+  const pendingOTP = await OTPLoginToken.findOne({
+    where: {
+      user_id: user.user_id,
+      is_verified: false,
+    },
+    order: [["created_at", "DESC"]],
+  });
+
+  // Check if OTP still valid and not too old
+  if (pendingOTP) {
+    const createdTime = new Date(pendingOTP.created_at);
+    const timePassed = (new Date() - createdTime) / 1000; // seconds
+
+    // Allow resend only after 30 seconds
+    if (timePassed < 30) {
+      throw new Error(
+        `Vui lòng đợi ${Math.ceil(30 - timePassed)} giây trước khi gửi lại OTP`
+      );
+    }
+
+    // If old OTP still valid, can reuse it
+    if (new Date() < pendingOTP.expires_at) {
+      // Send same OTP
+      try {
+        await emailService.sendLoginOTP(
+          user.email,
+          pendingOTP.otp_code,
+          user.user_name
+        );
+      } catch (error) {
+        console.error("Error sending login OTP email:", error);
+        throw new Error("Không thể gửi OTP. Vui lòng thử lại sau.");
+      }
+
+      return {
+        success: true,
+        message: "Mã OTP đã được gửi lại đến email của bạn",
+        otp_expires_in: "5 phút",
+      };
+    }
+  }
+
+  // Generate new OTP if old one expired
+  const newOtp = generateOTP();
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 5);
+
+  // Delete old OTP
+  await OTPLoginToken.destroy({
+    where: {
+      user_id: user.user_id,
+      is_verified: false,
+    },
+  });
+
+  // Create new OTP
+  await OTPLoginToken.create({
+    user_id: user.user_id,
+    otp_code: newOtp,
+    expires_at: expiresAt,
+    is_verified: false,
+    attempt_count: 0,
+    max_attempts: 5,
+  });
+
+  // Send new OTP
+  try {
+    await emailService.sendLoginOTP(user.email, newOtp, user.user_name);
+  } catch (error) {
+    console.error("Error sending login OTP email:", error);
+    throw new Error("Không thể gửi OTP. Vui lòng thử lại sau.");
+  }
+
+  return {
+    success: true,
+    message: "Mã OTP mới đã được gửi đến email của bạn",
+    otp_expires_in: "5 phút",
+  };
+};
+
+
