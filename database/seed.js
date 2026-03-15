@@ -220,27 +220,27 @@ async function seedData() {
     // ============================================================================
     // 5. CREATE MENU CATEGORIES
     // ============================================================================
-    const categoryData = [
-      { name: "Khai vị", desc: "Các món khai vị nhẹ nhàng" },
-      { name: "Canh & Súp", desc: "Canh nóng và những món súp truyền thống" },
-      { name: "Cơm & Mì Ý", desc: "Cơm, mì ý và các món ăn chính" },
-      { name: "Thịt nướng", desc: "Các món thịt nướng hấp dẫn" },
-      { name: "Hải sản", desc: "Hải sản tươi sống" },
-      { name: "Tráng miệng", desc: "Các món tráng miệng ngon lành" },
-      { name: "Đồ uống", desc: "Nước uống, bia rượu và cà phê" },
-    ];
+    // const categoryData = [
+    //   { name: "Khai vị", desc: "Các món khai vị nhẹ nhàng" },
+    //   { name: "Canh & Súp", desc: "Canh nóng và những món súp truyền thống" },
+    //   { name: "Cơm & Mì Ý", desc: "Cơm, mì ý và các món ăn chính" },
+    //   { name: "Thịt nướng", desc: "Các món thịt nướng hấp dẫn" },
+    //   { name: "Hải sản", desc: "Hải sản tươi sống" },
+    //   { name: "Tráng miệng", desc: "Các món tráng miệng ngon lành" },
+    //   { name: "Đồ uống", desc: "Nước uống, bia rượu và cà phê" },
+    // ];
 
-    const categories = await Promise.all(
-      categoryData.map((cat) =>
-        MenuCategory.create({
-          rid: ridUtil.generateRid("cat"),
-          category_name: cat.name,
-          description: cat.desc,
-          branch_id: branches[0].branch_id,
-        }),
-      ),
-    );
-    console.log("✓ Categories created:", categories.length);
+    // const categories = await Promise.all(
+    //   categoryData.map((cat) =>
+    //     MenuCategory.create({
+    //       rid: ridUtil.generateRid("cat"),
+    //       category_name: cat.name,
+    //       description: cat.desc,
+    //       branch_id: branches[0].branch_id,
+    //     }),
+    //   ),
+    // );
+    // console.log("✓ Categories created:", categories.length);
 
     // ============================================================================
     // 6. CREATE MENU ITEMS
@@ -354,7 +354,7 @@ async function seedData() {
           rid: ridUtil.generateRid("itm"),
           item_name: item.name,
           description: item.desc,
-          category_id: categories[item.cat].category_id,
+          // category_id: categories[item.cat].category_id,
           branch_id: branches[0].branch_id,
           price: item.price,
         }),
@@ -482,7 +482,7 @@ async function seedData() {
     console.log(`✓ Branches: ${branches.length}`);
     console.log(`✓ Users: ${users.length}`);
     console.log(`✓ Tables: ${tables.length}`);
-    console.log(`✓ Categories: ${categories.length}`);
+    // console.log(`✓ Categories: ${categories.length}`);
     console.log(`✓ Menu Items: ${items.length}`);
     console.log(`✓ Orders: ${orders.length}`);
     console.log(`✓ Notifications: ${notifications.length}`);

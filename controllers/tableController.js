@@ -10,19 +10,25 @@ const Table = db.Table;
 // Create table
 exports.createTable = async (req, res) => {
   const correlationId = req.correlationId;
-  const { table_name, branch_id, description } = req.body;
+  const { table_name, branch_id, capacity, status, description } = req.body;
 
   try {
     const newTable = await Table.create({
       rid: ridUtil.generateRid("tbl"),
       table_name,
       branch_id,
-      description,
+      capacity: capacity || 0,
+      status: status || "available",
+      description: description || "",
+      is_delete: false,
     });
+
+    // Trả về đầy đủ thông tin sau khi tạo
+    const result = await tableService.getTableById(newTable.table_id);
 
     return res
       .status(201)
-      .json(responseUtil.success(req, "Tạo bàn thành công", newTable, 201));
+      .json(responseUtil.success(req, "Tạo bàn thành công", result, 201));
   } catch (error) {
     if (error.name === "SequelizeUniqueConstraintError") {
       return res
@@ -39,7 +45,7 @@ exports.createTable = async (req, res) => {
 // Get all tables by branch
 exports.getAllTablesByBranch = async (req, res) => {
   const correlationId = req.correlationId;
-  const { branch_id } = req.query;
+  const { branch_id, page = 1, limit = 100 } = req.query;
 
   if (!branch_id) {
     return res.status(400).json(
@@ -50,13 +56,17 @@ exports.getAllTablesByBranch = async (req, res) => {
   }
 
   try {
-    const tables = await tableService.getAllTables(branch_id);
+    const result = await tableService.getAllTables(
+      Number(page),
+      Number(limit),
+      { branch_id: Number(branch_id) },
+    );
 
     return res.json(
       responseUtil.success(
         req,
-        `Lấy danh sách ${tables.length} bàn thành công`,
-        tables,
+        `Lấy danh sách ${result.tables.length} bàn thành công`,
+        result,
       ),
     );
   } catch (error) {
@@ -74,23 +84,16 @@ exports.getTableDetail = async (req, res) => {
 
   try {
     const table = await tableService.getTableById(id);
-
-    if (!table) {
-      return res
-        .status(404)
-        .json(
-          responseUtil.notFound(req, "Không tìm thấy bàn hoặc bàn đã bị xóa"),
-        );
-    }
-
     return res.json(
       responseUtil.success(req, "Lấy thông tin bàn thành công", table),
     );
   } catch (error) {
     logger.error("Get table detail failed", { correlationId, error });
     return res
-      .status(500)
-      .json(responseUtil.serverError(req, "Lỗi server khi lấy thông tin bàn"));
+      .status(404)
+      .json(
+        responseUtil.notFound(req, "Không tìm thấy bàn hoặc bàn đã bị xóa"),
+      );
   }
 };
 
@@ -98,11 +101,15 @@ exports.getTableDetail = async (req, res) => {
 exports.updateTable = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
-  const { table_name, description } = req.body;
+  const { table_number, capacity, status } = req.body;
 
   try {
     const [updatedRows] = await Table.update(
-      { table_name, description },
+      {
+        table_name: table_number, // map table_number → table_name trong DB
+        capacity,
+        status,
+      },
       { where: { table_id: id, is_delete: false } },
     );
 
@@ -115,7 +122,6 @@ exports.updateTable = async (req, res) => {
     }
 
     const updatedTable = await tableService.getTableById(id);
-
     return res.json(
       responseUtil.success(req, "Cập nhật bàn thành công", updatedTable),
     );
