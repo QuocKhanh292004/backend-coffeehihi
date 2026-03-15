@@ -114,7 +114,7 @@ CREATE TABLE menu_categories (
   category_id INT AUTO_INCREMENT PRIMARY KEY,
   rid VARCHAR(32) UNIQUE NOT NULL,
   category_name VARCHAR(255) NOT NULL,
-  category_image VARCHAR(255),
+  category_image VARCHAR(255) NOT NULL,
   branch_id INT NOT NULL,
   is_delete BOOLEAN DEFAULT FALSE,
   createdAt DATETIME DEFAULT CURRENT_TIMESTAMP,

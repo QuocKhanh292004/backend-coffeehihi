@@ -12,31 +12,85 @@ exports.createCategory = async (req, res) => {
   const correlationId = req.correlationId;
   const { category_name, branch_id } = req.body;
 
+  // try {
+  //   const payload = {
+  //     rid: ridUtil.generateRid("cat"),
+  //     category_name,
+  //     category_image: null,
+  //     branch_id,
+  //     is_delete: false,
+  //   };
+
+  //   // Image must be uploaded via multipart/form-data (req.file)
+  //   if (req.file) {
+  //     const validation = imageUtil.validateImageFile(
+  //       req.file.buffer,
+  //       req.file.originalname,
+  //     );
+  //     if (!validation.isValid) {
+  //       return res.status(400).json(
+  //         responseUtil.validationError(req, validation.error, {
+  //           file: validation.error,
+  //         }),
+  //       );
+  //     }
+  //     const imagePath = imageUtil.saveCategoryImage(req.file.buffer, "new");
+  //     payload.category_image = imagePath;
+  //   }
+
+  //   const newCategory = await MenuCategory.create(payload);
+  //   imageUtil.attachFullUrls(newCategory, req);
+  //   return res
+  //     .status(201)
+  //     .json(
+  //       responseUtil.success(req, "Tạo danh mục thành công", newCategory, 201),
+  //     );
+  // } catch (error) {
+  //   if (error.name === "SequelizeUniqueConstraintError") {
+  //     return res
+  //       .status(409)
+  //       .json(responseUtil.conflict(req, "RID danh mục đã tồn tại"));
+  //   }
+  //   logger.error("Create category failed", { correlationId, error });
+  //   return res
+  //     .status(500)
+  //     .json(responseUtil.serverError(req, "Lỗi server khi tạo danh mục"));
+  // }
   try {
+    // Image is required for creating category
+    if (!req.file) {
+      return res.status(400).json(
+        responseUtil.validationError(
+          req,
+          "Vui lòng cung cấp tệp ảnh danh mục",
+          {
+            file: "Tệp ảnh danh mục là bắt buộc",
+          },
+        ),
+      );
+    }
+
+    const validation = imageUtil.validateImageFile(
+      req.file.buffer,
+      req.file.originalname,
+    );
+    if (!validation.isValid) {
+      return res.status(400).json(
+        responseUtil.validationError(req, validation.error, {
+          file: validation.error,
+        }),
+      );
+    }
+
+    const imagePath = imageUtil.saveCategoryImage(req.file.buffer, "new");
+
     const payload = {
       rid: ridUtil.generateRid("cat"),
       category_name,
-      category_image: null,
+      category_image: imagePath,
       branch_id,
       is_delete: false,
     };
-
-    // Image must be uploaded via multipart/form-data (req.file)
-    if (req.file) {
-      const validation = imageUtil.validateImageFile(
-        req.file.buffer,
-        req.file.originalname,
-      );
-      if (!validation.isValid) {
-        return res.status(400).json(
-          responseUtil.validationError(req, validation.error, {
-            file: validation.error,
-          }),
-        );
-      }
-      const imagePath = imageUtil.saveCategoryImage(req.file.buffer, "new");
-      payload.category_image = imagePath;
-    }
 
     const newCategory = await MenuCategory.create(payload);
     imageUtil.attachFullUrls(newCategory, req);
@@ -45,17 +99,7 @@ exports.createCategory = async (req, res) => {
       .json(
         responseUtil.success(req, "Tạo danh mục thành công", newCategory, 201),
       );
-  } catch (error) {
-    if (error.name === "SequelizeUniqueConstraintError") {
-      return res
-        .status(409)
-        .json(responseUtil.conflict(req, "RID danh mục đã tồn tại"));
-    }
-    logger.error("Create category failed", { correlationId, error });
-    return res
-      .status(500)
-      .json(responseUtil.serverError(req, "Lỗi server khi tạo danh mục"));
-  }
+  } catch (error) {}
 };
 
 // Get all categories by branch

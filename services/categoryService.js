@@ -2,8 +2,8 @@
  * getAllCategories, getCategoryById, createCategory, updateCategory, deleteCategory
  */
 
-const db = require('../models');
-const ridUtil = require('../utils/ridUtil');
+const db = require("../models");
+const ridUtil = require("../utils/ridUtil");
 const { MenuCategory, Branch } = db;
 
 // Get all categories
@@ -15,10 +15,10 @@ exports.getAllCategories = async (page = 1, limit = 10, filters = {}) => {
 
   const { count, rows } = await MenuCategory.findAndCountAll({
     where,
-    include: [{ model: Branch, attributes: ['branch_id', 'branch_name'] }],
+    include: [{ model: Branch, attributes: ["branch_id", "branch_name"] }],
     limit,
     offset,
-    order: [['created_at', 'DESC']]
+    order: [["created_at", "DESC"]],
   });
 
   return { categories: rows, total: count, page, limit };
@@ -28,10 +28,10 @@ exports.getAllCategories = async (page = 1, limit = 10, filters = {}) => {
 exports.getCategoryById = async (categoryId) => {
   const category = await MenuCategory.findOne({
     where: { category_id: categoryId, is_delete: false },
-    include: [{ model: Branch, attributes: ['branch_id', 'branch_name'] }]
+    include: [{ model: Branch, attributes: ["branch_id", "branch_name"] }],
   });
 
-  if (!category) throw new Error('Category not found');
+  if (!category) throw new Error("Category not found");
   return category;
 };
 
@@ -40,15 +40,15 @@ exports.createCategory = async (data) => {
   const { category_name, branch_id, category_image } = data;
 
   if (!category_name || !branch_id) {
-    throw new Error('category_name and branch_id are required');
+    throw new Error("category_name and branch_id are required");
   }
 
   return await MenuCategory.create({
-    rid: ridUtil.generateRid('cat'),
+    rid: ridUtil.generateRid("cat"),
     category_name,
     branch_id,
     category_image: category_image || null,
-    is_delete: false
+    is_delete: false,
   });
 };
 
