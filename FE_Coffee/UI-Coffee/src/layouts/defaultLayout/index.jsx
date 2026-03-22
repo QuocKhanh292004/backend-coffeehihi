@@ -1,15 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import Menu from "../menu/Menu.jsx";
-import Header from "../../components/header/Header.jsx";
-import { adminMenu } from "../menu/AdminMenu.js";
-import { customerMenu } from "../menu/CustomerMenu.js";
+import { useEffect, useState } from 'react';
+import Menu from '../menu/Menu.jsx';
+import Header from '../../components/header/Header.jsx';
+import { adminMenu } from '../menu/AdminMenu.js';
+import { customerMenu } from '../menu/CustomerMenu.js';
+
 function DefaultLayout({ children }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [role, setRole] = useState(false);
     useEffect(() => {
         localStorage.setItem("role", "admin");
         setRole(localStorage.getItem("role"));
-
     }, []);
     const menuList = role === "admin" ? adminMenu : customerMenu;
     return (
