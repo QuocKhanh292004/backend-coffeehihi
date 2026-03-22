@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import config from '../../../config';
 
 const LoginForm = ({ onLoginSuccess, onError, isLoading }) => {
-    const [email, setEmail] = useState('admin@restaurant.com');
-    const [password, setPassword] = useState('Admin@123456');
+    const [email, setEmail] = useState('tranquockhanh20049@gmail.com');
+    const [password, setPassword] = useState('Khanh@123');
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = (e) => {

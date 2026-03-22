@@ -21,6 +21,14 @@ const TableModal = ({ isOpen, onClose, onSuccess, mode, initialData, branches = 
     const [showQRView, setShowQRView] = useState(false);
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState({});
+    const URL_CUSTOMER = import.meta.env.VITE_BASE_URL_CUSTOMER;
+
+    const isQrMode = mode === 'qr';
+    const qrTableId = initialData?.table_id;
+    const qrBranchId = initialData?.branch_id;
+    const qrValue = qrTableId
+        ? `${URL_CUSTOMER}/${qrBranchId}/${qrTableId}`
+        : (formData.table_number || formData.table_name || '');
 
     useEffect(() => {
         if (mode === 'update' && initialData) {
@@ -29,6 +37,14 @@ const TableModal = ({ isOpen, onClose, onSuccess, mode, initialData, branches = 
                 capacity: initialData.capacity || '',
                 status: initialData.status || 'available',
                 // reset các trường add
+                table_name: '',
+                branch_id: '',
+            });
+        } else if (mode === 'qr' && initialData) {
+            setFormData({
+                table_number: initialData.table_name || '',
+                capacity: initialData.capacity || '',
+                status: initialData.status || 'available',
                 table_name: '',
                 branch_id: '',
             });
@@ -41,7 +57,7 @@ const TableModal = ({ isOpen, onClose, onSuccess, mode, initialData, branches = 
                 table_number: '',
             });
         }
-        setShowQRView(false);
+        setShowQRView(mode === 'qr');
         setErrors({});
     }, [mode, initialData, isOpen]);
 
@@ -69,6 +85,8 @@ const TableModal = ({ isOpen, onClose, onSuccess, mode, initialData, branches = 
     };
 
     const handleSubmit = async () => {
+        if (isQrMode) return;
+
         const newErrors = validate();
         if (Object.keys(newErrors).length > 0) {
             setErrors(newErrors);
@@ -110,19 +128,26 @@ const TableModal = ({ isOpen, onClose, onSuccess, mode, initialData, branches = 
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
                 <div className="bg-white w-full max-w-[320px] rounded-3xl shadow-2xl p-8 flex flex-col items-center">
-                    <p className="text-slate-500 text-sm mb-4 font-medium">
-                        Mã QR - {formData.table_number}
+                    <p className="text-slate-500 text-sm mb-4 font-medium text-center break-all">
+                        {qrValue}
                     </p>
                     <div className="w-48 h-48 mb-8 border border-slate-100 p-2 rounded-xl">
                         <img
-                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${formData.table_number}`}
+                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrValue)}`}
                             alt="Table QR"
                             className="w-full h-full object-contain"
                         />
                     </div>
                     <div className="flex gap-4 w-full">
                         <button
-                            onClick={() => { setShowQRView(false); onSuccess(); }}
+                            onClick={() => {
+                                setShowQRView(false);
+                                if (mode === 'update') {
+                                    onSuccess();
+                                    return;
+                                }
+                                onClose();
+                            }}
                             className="flex-1 py-2.5 bg-[#2d3a54] text-white rounded-xl font-bold shadow-md hover:bg-slate-800 transition-all"
                         >
                             Đóng
@@ -284,3 +309,4 @@ const TableModal = ({ isOpen, onClose, onSuccess, mode, initialData, branches = 
 };
 
 export default TableModal;
+
