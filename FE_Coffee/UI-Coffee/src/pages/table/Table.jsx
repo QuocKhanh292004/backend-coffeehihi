@@ -23,6 +23,7 @@ function Table() {
     const [modalMode, setModalMode] = useState('add');
     const [selectedTable, setSelectedTable] = useState(null);
     const [itemsPerPage, setItemsPerPage] = useState(5);
+    const URL_CUSTOMER = import.meta.env.VITE_BASE_URL_CUSTOMER;
 
     const filteredTables = allTables.filter((t) =>
         t.table_name?.toLowerCase().includes(searchName.toLowerCase())
@@ -77,6 +78,12 @@ function Table() {
         setIsModalOpen(true);
     };
 
+    const handleOpenQr = (table) => {
+        setModalMode('qr');
+        setSelectedTable(table);
+        setIsModalOpen(true);
+    };
+
     const handleDelete = async (id) => {
         if (window.confirm('Bạn có chắc chắn muốn xóa bàn này?')) {
             try {
@@ -98,6 +105,8 @@ function Table() {
         if (status === 'occupied') return {text: 'Đang dùng', cls: 'bg-red-50 text-red-500'};
         return {text: 'Đã đặt trước', cls: 'bg-yellow-50 text-yellow-600'};
     };
+
+    const buildCustomerUrl = (qrBranchId, tableId) => `${URL_CUSTOMER}/${qrBranchId}/${tableId}`;
 
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-8 bg-white min-h-screen text-slate-700 font-sans">
@@ -178,11 +187,18 @@ function Table() {
                                             {table.Branch?.branch_name || '—'}
                                         </td>
                                         <td className="py-2 px-6 border-r border-slate-50">
-                                            <img
-                                                src={`https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=${table.table_name}`}
-                                                alt="QR"
-                                                className="w-10 h-10 object-contain border border-slate-100 p-1 rounded bg-white"
-                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleOpenQr(table)}
+                                                className="rounded bg-white hover:bg-slate-50 transition-colors"
+                                                title="Xem mã QR"
+                                            >
+                                                <img
+                                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=50x50&data=${encodeURIComponent(buildCustomerUrl(table?.qrBranchId, table.table_id))}`}
+                                                    alt={`QR ${table.table_name}`}
+                                                    className="w-10 h-10 object-contain border border-slate-100 p-1 rounded bg-white"
+                                                />
+                                            </button>
                                         </td>
                                         <td className="py-4 px-6">
                                             <div className="flex justify-center gap-3">
@@ -276,3 +292,4 @@ function Table() {
 }
 
 export default Table;
+
