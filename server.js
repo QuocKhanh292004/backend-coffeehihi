@@ -15,14 +15,48 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const cors = require("cors");
+const os = require("os");
 
-app.use(
-  cors({
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true,
-  }),
-);
+// Get machine IP address
+function getLocalIP() {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      // Skip internal and non-IPv4 addresses
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
+}
+
+const LOCAL_IP = getLocalIP();
+const FRONTEND_PORT = process.env.FRONTEND_PORT || "5173";
+
+// CORS configuration - allow localhost, IP address, and custom origins
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      "http://localhost:5173",
+      `http://localhost:${FRONTEND_PORT}`,
+      `http://127.0.0.1:${FRONTEND_PORT}`,
+      `http://${LOCAL_IP}:${FRONTEND_PORT}`,
+      process.env.FRONTEND_URL, // Allow custom frontend URL from env
+    ].filter(Boolean);
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+console.log(`✅ CORS enabled for: http://localhost:${FRONTEND_PORT}, http://${LOCAL_IP}:${FRONTEND_PORT}`);
 // Middleware cơ bản
 app.use(express.json());
 app.use(correlationIdMiddleware); // Add correlation ID for request tracing
