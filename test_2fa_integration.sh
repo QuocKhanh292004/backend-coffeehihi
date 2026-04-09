@@ -18,7 +18,7 @@ echo ""
 echo "Endpoint: POST /api/auth/login"
 echo "Body:"
 echo '{
-  "email": "admin@restaurant.com",
+  "email": "tranquockhanh2920049@gmail.com",
   "password": "Admin@123456",
   "use2FA": false
 }'
@@ -27,7 +27,7 @@ echo "Command:"
 echo "curl -X POST $BASE_URL/api/auth/login \\"
 echo "  -H \"Content-Type: application/json\" \\"
 echo "  -d '{"
-echo '    "email": "admin@restaurant.com",'
+echo '    "email": "tranquockhanh2920049@gmail.com",'
 echo '    "password": "Admin@123456",'
 echo '    "use2FA": false'
 echo '  }'"
@@ -37,7 +37,7 @@ echo '{
   "success": true,
   "message": "Login successful",
   "data": {
-    "user": { "user_id": 1, "email": "admin@restaurant.com", "user_name": "Admin", "role_id": 1 },
+    "user": { "user_id": 1, "email": "tranquockhanh2920049@gmail.com", "user_name": "Admin", "role_id": 1 },
     "token": "jwt_token_here",
     "expiresIn": "7d"
   }
@@ -55,7 +55,7 @@ echo ""
 echo "Endpoint: POST /api/auth/login"
 echo "Body:"
 echo '{
-  "email": "admin@restaurant.com",
+  "email": "tranquockhanh2920049@gmail.com",
   "password": "Admin@123456",
   "use2FA": true
 }'
@@ -64,7 +64,7 @@ echo "Command:"
 echo "curl -X POST $BASE_URL/api/auth/login \\"
 echo "  -H \"Content-Type: application/json\" \\"
 echo "  -d '{"
-echo '    "email": "admin@restaurant.com",'
+echo '    "email": "tranquockhanh2920049@gmail.com",'
 echo '    "password": "Admin@123456",'
 echo '    "use2FA": true'
 echo '  }'"
@@ -74,7 +74,7 @@ echo '{
   "success": true,
   "message": "Mã OTP đã được gửi đến email của bạn",
   "data": {
-    "user": { "user_id": 1, "user_name": "Admin", "email": "admin@restaurant.com", "role_id": 1 },
+    "user": { "user_id": 1, "user_name": "Admin", "email": "tranquockhanh2920049@gmail.com", "role_id": 1 },
     "otp_expires_in": "5 phút"
   }
 }'
@@ -195,7 +195,7 @@ echo "DATABASE VERIFICATION QUERIES"
 echo "============================="
 echo ""
 echo "1. Check login attempts:"
-echo "   SELECT user_id, email, login_attempt, lock_up FROM users WHERE email = 'admin@restaurant.com';"
+echo "   SELECT user_id, email, login_attempt, lock_up FROM users WHERE email = 'tranquockhanh2920049@gmail.com';"
 echo ""
 echo "2. Check OTP records:"
 echo "   SELECT * FROM otp_login_tokens WHERE user_id = 1 ORDER BY created_at DESC;"
@@ -215,14 +215,14 @@ echo ""
 echo "1. Test Traditional Login:"
 curl -s -X POST $BASE_URL/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@restaurant.com","password":"Admin@123456","use2FA":false}' | \
+  -d '{"email":"tranquockhanh2920049@gmail.com","password":"Admin@123456","use2FA":false}' | \
   grep -o '"token":"[^"]*' | head -1 | sed 's/"token":"//' || echo "(Run npm start first)"
 echo ""
 echo ""
 echo "2. Test 2FA Login Step 1:"
 curl -s -X POST $BASE_URL/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"email":"admin@restaurant.com","password":"Admin@123456","use2FA":true}' || echo "(Run npm start first)"
+  -d '{"email":"tranquockhanh2920049@gmail.com","password":"Admin@123456","use2FA":true}' || echo "(Run npm start first)"
 echo ""
 echo ""
 echo "3. Use this token in other API calls:"

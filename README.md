@@ -20,12 +20,12 @@ API Docs: http://localhost:3000/api-docs
 
 ## 🔐 Default Credentials
 
-| Role     | Email                   | Password        |
-| -------- | ----------------------- | --------------- |
-| Admin    | admin@restaurant.com    | Admin@123456    |
-| Manager  | manager1@restaurant.com | Manager@123456  |
-| Staff    | staff1@restaurant.com   | Staff@123456    |
-| Customer | customer1@email.com     | Customer@123456 |
+| Role     | Email                          | Password        |
+| -------- | ------------------------------ | --------------- |
+| Admin    | tranquockhanh2920049@gmail.com | Admin@123456    |
+| Manager  | manager1@restaurant.com        | Manager@123456  |
+| Staff    | staff1@restaurant.com          | Staff@123456    |
+| Customer | customer1@email.com            | Customer@123456 |
 
 ---
 

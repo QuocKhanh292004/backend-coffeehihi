@@ -2,7 +2,11 @@
 const express = require("express");
 const router = express.Router();
 const branchController = require("../controllers/branchController");
-const { verifyToken, isAdmin } = require("../middleware/auth");
+const {
+  verifyToken,
+  verifyTokenOptional,
+  isAdmin,
+} = require("../middleware/auth");
 const {
   singleImageUpload,
   handleUploadError,
@@ -83,7 +87,7 @@ router.post(
   handleUploadError,
   branchController.createBranch,
 );
-router.get("/", verifyToken, branchController.getAllBranches);
+router.get("/", verifyTokenOptional, branchController.getAllBranches);
 
 /**
  * @swagger
@@ -152,7 +156,7 @@ router.get("/", verifyToken, branchController.getAllBranches);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
-router.get("/:id", verifyToken, branchController.getBranchDetail);
+router.get("/:id", verifyTokenOptional, branchController.getBranchDetail);
 router.put(
   "/:id",
   verifyToken,

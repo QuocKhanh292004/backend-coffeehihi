@@ -18,7 +18,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": false\n}"
+          "raw": "{\n  \"email\": \"tranquockhanh2920049@gmail.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": false\n}"
         },
         "url": {
           "raw": "http://localhost:3000/api/auth/login",
@@ -44,7 +44,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": true\n}"
+          "raw": "{\n  \"email\": \"tranquockhanh2920049@gmail.com\",\n  \"password\": \"Admin@123456\",\n  \"use2FA\": true\n}"
         },
         "url": {
           "raw": "http://localhost:3000/api/auth/login/step1",
@@ -148,7 +148,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"admin@restaurant.com\",\n  \"password\": \"WrongPassword@123456\",\n  \"use2FA\": false\n}"
+          "raw": "{\n  \"email\": \"tranquockhanh2920049@gmail.com\",\n  \"password\": \"WrongPassword@123456\",\n  \"use2FA\": false\n}"
         },
         "url": {
           "raw": "http://localhost:3000/api/auth/login",
@@ -215,4 +215,3 @@
     }
   ]
 }
-

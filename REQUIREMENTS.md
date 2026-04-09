@@ -3,6 +3,7 @@
 ## 🖥️ System Requirements
 
 ### Minimum
+
 - **Node.js**: 16.13.0 or higher
 - **npm**: 7.0.0 or higher
 - **PostgreSQL**: 12.0 or higher
@@ -10,6 +11,7 @@
 - **Disk**: 1GB free space
 
 ### Recommended
+
 - **Node.js**: 18.x or 20.x
 - **npm**: 9.x or higher
 - **PostgreSQL**: 14.x or higher
@@ -21,25 +23,27 @@
 ## 📦 Dependencies
 
 ### Production
+
 ```json
 {
-  "bcryptjs": "^3.0.3",           // Password hashing
-  "chalk": "^4.1.2",              // Console colors
-  "dotenv": "^17.2.3",            // Environment variables
-  "express": "^5.1.0",            // Web framework
-  "jsonwebtoken": "^9.0.2",       // JWT authentication
-  "pg": "^8.16.3",                // PostgreSQL driver
-  "sequelize": "^6.37.7",         // ORM
-  "swagger-jsdoc": "^6.2.8",      // API documentation
+  "bcryptjs": "^3.0.3", // Password hashing
+  "chalk": "^4.1.2", // Console colors
+  "dotenv": "^17.2.3", // Environment variables
+  "express": "^5.1.0", // Web framework
+  "jsonwebtoken": "^9.0.2", // JWT authentication
+  "pg": "^8.16.3", // PostgreSQL driver
+  "sequelize": "^6.37.7", // ORM
+  "swagger-jsdoc": "^6.2.8", // API documentation
   "swagger-ui-express": "^5.0.0", // Swagger UI
-  "uuid": "^9.0.1"                // UUID generation
+  "uuid": "^9.0.1" // UUID generation
 }
 ```
 
 ### Development
+
 ```json
 {
-  "nodemon": "^3.1.11"            // Auto-restart on changes
+  "nodemon": "^3.1.11" // Auto-restart on changes
 }
 ```
 
@@ -51,12 +55,14 @@
 
 **Windows/macOS**: Download from https://nodejs.org/  
 **Linux (Ubuntu/Debian)**:
+
 ```bash
 sudo apt update
 sudo apt install nodejs npm
 ```
 
 Verify:
+
 ```bash
 node --version
 npm --version
@@ -69,6 +75,7 @@ npm --version
 **Linux**: `sudo apt install postgresql postgresql-contrib && sudo systemctl start postgresql`
 
 Verify:
+
 ```bash
 psql --version
 psql -U postgres
@@ -81,6 +88,7 @@ createdb -U postgres restaurant_db
 ```
 
 Or via psql:
+
 ```sql
 psql -U postgres
 CREATE DATABASE restaurant_db;
@@ -102,6 +110,7 @@ npm install
 ### 6. Create Environment File
 
 Create `.env` in project root:
+
 ```env
 DB_HOST=localhost
 DB_PORT=5432
@@ -122,13 +131,14 @@ npm run db:init
 ```
 
 Expected output:
+
 ```
 ✅ Schema reset complete
 ✅ Created role: admin
 ✅ Created role: manager
 ✅ Created role: staff
 ✅ Created role: customer
-✅ Admin created: admin@restaurant.com
+✅ Admin created: tranquockhanh2920049@gmail.com
 ```
 
 ### 8. Populate Sample Data
@@ -138,6 +148,7 @@ npm run db:seed
 ```
 
 Expected output:
+
 ```
 ✅ Created 3 branches
 ✅ Created 12 users
@@ -155,6 +166,7 @@ npm start               # Production mode
 ```
 
 Expected:
+
 ```
 🚀 Server running on http://localhost:3000
 ✅ Database connected
@@ -165,18 +177,18 @@ Expected:
 
 ## 📋 Environment Variables Reference
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| DB_HOST | Yes | localhost | PostgreSQL hostname |
-| DB_PORT | Yes | 5432 | PostgreSQL port |
-| DB_NAME | Yes | restaurant_db | Database name |
-| DB_USER | Yes | postgres | Database user |
-| DB_PASSWORD | Yes | - | Database password |
-| PORT | No | 3000 | Server port |
-| NODE_ENV | No | development | Environment mode |
-| JWT_SECRET | Yes | - | JWT secret key |
-| JWT_EXPIRES_IN | No | 7d | Token expiration |
-| ADMIN_DEFAULT_PASSWORD | No | Admin@123456 | Default admin password |
+| Variable               | Required | Default       | Description            |
+| ---------------------- | -------- | ------------- | ---------------------- |
+| DB_HOST                | Yes      | localhost     | PostgreSQL hostname    |
+| DB_PORT                | Yes      | 5432          | PostgreSQL port        |
+| DB_NAME                | Yes      | restaurant_db | Database name          |
+| DB_USER                | Yes      | postgres      | Database user          |
+| DB_PASSWORD            | Yes      | -             | Database password      |
+| PORT                   | No       | 3000          | Server port            |
+| NODE_ENV               | No       | development   | Environment mode       |
+| JWT_SECRET             | Yes      | -             | JWT secret key         |
+| JWT_EXPIRES_IN         | No       | 7d            | Token expiration       |
+| ADMIN_DEFAULT_PASSWORD | No       | Admin@123456  | Default admin password |
 
 ---
 
@@ -209,7 +221,9 @@ npm run db:check
 ## 🐛 Common Issues & Solutions
 
 ### "psql: command not found"
+
 PostgreSQL not installed or not in PATH
+
 ```bash
 # macOS
 brew install postgresql
@@ -221,14 +235,18 @@ sudo apt install postgresql-client
 ```
 
 ### "FATAL: database restaurant_db does not exist"
+
 Create database first:
+
 ```bash
 createdb -U postgres restaurant_db
 npm run db:init
 ```
 
 ### "ECONNREFUSED localhost:5432"
+
 PostgreSQL not running:
+
 ```bash
 # Start PostgreSQL
 sudo systemctl start postgresql     # Linux
@@ -237,12 +255,15 @@ brew services start postgresql      # macOS
 ```
 
 ### "Port 3000 already in use"
+
 Change port in .env:
+
 ```env
 PORT=3001
 ```
 
 Or kill process:
+
 ```bash
 # macOS/Linux
 lsof -i :3000 | grep LISTEN | awk '{print $2}' | xargs kill -9
@@ -253,20 +274,26 @@ taskkill /PID <PID> /F
 ```
 
 ### "Cannot find module"
+
 Reinstall dependencies:
+
 ```bash
 rm -rf node_modules package-lock.json
 npm install
 ```
 
 ### "JWT_SECRET not set"
+
 Add to .env:
+
 ```env
 JWT_SECRET=your_secret_key_here_minimum_32_chars
 ```
 
 ### Database authentication fails
+
 Verify PostgreSQL user password:
+
 ```bash
 psql -U postgres -h localhost
 # Enter password when prompted
@@ -294,13 +321,13 @@ After setup, verify:
 
 ## 📊 Version Compatibility
 
-| Component | Minimum | Recommended | Tested |
-|-----------|---------|-------------|--------|
-| Node.js | 16.13.0 | 18.x | 20.x |
-| npm | 7.0.0 | 9.x | 10.x |
-| PostgreSQL | 12.0 | 14.x | 15.x |
-| Express | 5.0.0 | 5.1.0 | 5.1.0 |
-| Sequelize | 6.30.0 | 6.37.7 | 6.37.7 |
+| Component  | Minimum | Recommended | Tested |
+| ---------- | ------- | ----------- | ------ |
+| Node.js    | 16.13.0 | 18.x        | 20.x   |
+| npm        | 7.0.0   | 9.x         | 10.x   |
+| PostgreSQL | 12.0    | 14.x        | 15.x   |
+| Express    | 5.0.0   | 5.1.0       | 5.1.0  |
+| Sequelize  | 6.30.0  | 6.37.7      | 6.37.7 |
 
 ---
 

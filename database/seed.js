@@ -122,7 +122,7 @@ async function seedData() {
       await User.create({
         rid: ridUtil.generateRid("usr"),
         user_name: "Admin Hệ Thống",
-        email: "admin@restaurant.com",
+        email: "tranquockhanh2920049@gmail.com",
         password: pass,
         role_id: roles[0].role_id,
         is_active: true,
@@ -489,7 +489,7 @@ async function seedData() {
     console.log("========================================================\n");
 
     console.log("📝 Test Accounts:");
-    console.log("   Admin: admin@restaurant.com / Admin@123456");
+    console.log("   Admin: tranquockhanh2920049@gmail.com / Admin@123456");
     console.log("   Manager: manager1@restaurant.com / Manager@123456");
     console.log("   Staff: staff0_1@restaurant.com / Staff@123456");
     console.log("   Customer: customer1@email.com / Customer@123456\n");

@@ -25,7 +25,7 @@ const {
  *               email:
  *                 type: string
  *                 format: email
- *                 example: 'admin@restaurant.com'
+ *                 example: 'tranquockhanh2920049@gmail.com'
  *               password:
  *                 type: string
  *                 format: password
@@ -309,7 +309,7 @@ router.post("/login/step2", authController.loginStep2);
  *               email:
  *                 type: string
  *                 format: email
- *                 example: 'admin@restaurant.com'
+ *                 example: 'tranquockhanh2920049@gmail.com'
  *     responses:
  *       200:
  *         description: OTP đã được gửi lại
@@ -333,4 +333,3 @@ router.post("/login/verify-otp", authController.verifyOTP);
 // Các API password management đã bị ẩn - Được quản lý bởi admin
 
 module.exports = router;
-

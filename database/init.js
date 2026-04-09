@@ -107,7 +107,8 @@ async function initializeDatabase() {
 
     // Create default admin account if not exists
     const bcrypt = require("bcryptjs");
-    const adminEmail = process.env.ADMIN_EMAIL || "admin@restaurant.com";
+    const adminEmail =
+      process.env.ADMIN_EMAIL || "tranquockhanh2920049@gmail.com";
     const adminDefaultPassword =
       process.env.ADMIN_DEFAULT_PASSWORD || "Admin@123456";
     const [adminUser, created] = await User.findOrCreate({

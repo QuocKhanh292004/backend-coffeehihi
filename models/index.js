@@ -27,10 +27,7 @@ db.EmailVerificationToken = require("./email_verification_token")(
   sequelize,
   Sequelize.DataTypes,
 );
-db.OTPLoginToken = require("./otp_login_token")(
-  sequelize,
-  Sequelize.DataTypes,
-);
+db.OTPLoginToken = require("./otp_login_token")(sequelize, Sequelize.DataTypes);
 db.AuditLog = require("./audit_log")(sequelize, Sequelize.DataTypes);
 
 // =============================================================================
@@ -93,7 +90,7 @@ db.OrderItem.belongsTo(db.Order, { foreignKey: "order_id" });
 
 // MenuItem - OrderItem (1-n)
 db.MenuItem.hasMany(db.OrderItem, { foreignKey: "item_id" });
-db.OrderItem.belongsTo(db.MenuItem, { foreignKey: "item_id" });
+db.OrderItem.belongsTo(db.MenuItem, { foreignKey: "item_id", as: "menuItem" });
 
 // User - Order (1-n)
 db.User.hasMany(db.Order, { foreignKey: "user_id" });
@@ -112,7 +109,10 @@ db.User.hasMany(db.Notification, { foreignKey: "user_id" });
 db.Notification.belongsTo(db.User, { foreignKey: "user_id" });
 
 // User - OTPLoginToken (1-n)
-db.User.hasMany(db.OTPLoginToken, { foreignKey: "user_id", onDelete: "CASCADE" });
+db.User.hasMany(db.OTPLoginToken, {
+  foreignKey: "user_id",
+  onDelete: "CASCADE",
+});
 db.OTPLoginToken.belongsTo(db.User, { foreignKey: "user_id" });
 
 module.exports = db;

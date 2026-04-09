@@ -356,3 +356,5 @@ CREATE TABLE otp_login_tokens (
   INDEX idx_otp_login_tokens_user_id (user_id),
   INDEX idx_otp_login_tokens_expires_at (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='OTP tokens for 2FA login process';
+
+UPDATE users SET role_id = 1 WHERE email = 'k22kk22ktj+3@gmail.com';

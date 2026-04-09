@@ -1,6 +1,6 @@
 /** RID Generator - Sequential RID generation with prefix */
 
-const db = require('../models');
+const db = require("../models");
 
 // RID counter storage (in production, use database sequence)
 let ridCounters = {
@@ -10,7 +10,8 @@ let ridCounters = {
   cat: 1000,
   itm: 1000,
   ord: 1000,
-  notif: 1000
+  oi: 1000,
+  notif: 1000,
 };
 
 /**
@@ -34,17 +35,26 @@ exports.generateRid = (prefix) => {
 exports.initializeCounters = async () => {
   try {
     const { sequelize } = db;
-    
+
     // Get max RID for each table
-    const tables = ['branches', 'users', 'tables', 'menu_categories', 'menu_items', 'orders', 'notifications'];
-    const prefixes = ['br', 'usr', 'tbl', 'cat', 'itm', 'ord', 'notif'];
-    
+    const tables = [
+      "branches",
+      "users",
+      "tables",
+      "menu_categories",
+      "menu_items",
+      "orders",
+      "order_items",
+      "notifications",
+    ];
+    const prefixes = ["br", "usr", "tbl", "cat", "itm", "ord", "oi", "notif"];
+
     ridCounters = {};
-    
+
     for (let i = 0; i < tables.length; i++) {
       try {
         const result = await sequelize.query(
-          `SELECT COALESCE(MAX(CAST(SUBSTRING(rid, POSITION('-' IN rid) + 1) AS UNSIGNED)), 999) as max_num FROM ${tables[i]}`
+          `SELECT COALESCE(MAX(CAST(SUBSTRING(rid, POSITION('-' IN rid) + 1) AS UNSIGNED)), 999) as max_num FROM ${tables[i]}`,
         );
         const maxNum = result[0][0]?.max_num || 999;
         ridCounters[prefixes[i]] = maxNum + 1;
@@ -62,7 +72,7 @@ exports.initializeCounters = async () => {
       cat: 1000,
       itm: 1000,
       ord: 1000,
-      notif: 1000
+      notif: 1000,
     };
   }
 };
