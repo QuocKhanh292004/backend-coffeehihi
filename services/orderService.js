@@ -1,22 +1,25 @@
-/** Order Service - Order management operations
- * createOrder, getOrderById, getAllOrders, getUserOrders, updateOrderStatus
- * cancelOrder, addOrderItem, updateOrderItemQuantity, removeOrderItem, recalculateOrderTotal
- * getOrderStatistics
- */
+/** Order Service - Order management operations */
 
 const db = require("../models");
 const auditUtil = require("../utils/auditUtil");
 const ridUtil = require("../utils/ridUtil");
 
-const { Order, OrderItem, MenuItem, User } = db;
+const { Order, OrderItem, MenuItem } = db;
 
-// ✅ createOrder — chỉ dùng cột thật trong DB
+// ✅ Helper: tính total_price từ OrderItems
+const calcTotal = (orderItems = []) => {
+  return orderItems.reduce((sum, item) => {
+    return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1);
+  }, 0);
+};
+
 exports.createOrder = async (orderData) => {
-  const { table_id, notes } = orderData;
+  const { table_id, branch_id, notes } = orderData;
 
   const order = await Order.create({
     rid: ridUtil.generateRid("ord"),
-    table_id: table_id,
+    table_id,
+    branch_id,
     order_status: "pending",
     order_note: notes || "",
   });
@@ -39,19 +42,37 @@ exports.getOrderById = async (orderId) => {
           },
         ],
       },
+      // ✅ Include Branch và Table
+      {
+        model: db.Branch,
+        as: "Branch",
+        attributes: ["branch_id", "branch_name"],
+      },
+      {
+        model: db.Table,
+        as: "Table",
+        attributes: ["table_id", "table_name"],
+      },
     ],
   });
 
   if (!order) throw new Error("Order not found");
-  return order;
+
+  // ✅ Gắn total_price vào order
+  const plain = order.toJSON();
+  plain.total_price = calcTotal(plain.OrderItems);
+
+  return plain;
 };
 
+// ✅ getAllOrders — include Branch, Table, tính total_price
 exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
   const offset = (page - 1) * limit;
-  const where = {}; // ❌ bỏ is_delete: false
+  const where = {};
 
   if (filters.status) where.order_status = filters.status;
-  // ❌ bỏ filters.branch_id và filters.user_id (không có cột này)
+  if (filters.table_id) where.table_id = filters.table_id;
+  if (filters.branch_id) where.branch_id = filters.branch_id;
 
   const { count, rows } = await Order.findAndCountAll({
     where,
@@ -59,17 +80,34 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
       {
         model: OrderItem,
         as: "OrderItems",
-        attributes: ["quantity"],
-        // ❌ bỏ unit_price (cột thật là 'price' trong order_items)
+        attributes: ["quantity", "price"],
+      },
+      {
+        model: db.Branch,
+        as: "Branch",
+        attributes: ["branch_id", "branch_name"],
+      },
+      {
+        model: db.Table,
+        as: "Table",
+        attributes: ["table_id", "table_name"],
       },
     ],
     limit,
     offset,
-    order: [["createdAt", "DESC"]],
+    order: [["order_time", "DESC"]],
+    distinct: true, // ✅ tránh count sai khi có include
+  });
+
+  // ✅ Tính total_price cho từng order
+  const orders = rows.map((row) => {
+    const plain = row.toJSON();
+    plain.total_price = calcTotal(plain.OrderItems);
+    return plain;
   });
 
   return {
-    orders: rows,
+    orders,
     total: count,
     page,
     limit,
@@ -77,17 +115,14 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
   };
 };
 
-// ✅ recalculateOrderTotal — bảng không có total_amount, nên giữ làm no-op để tránh ghi vào cột không tồn tại
 exports.recalculateOrderTotal = async (orderId) => {
   return 0;
 };
 
-// Get user orders - Fetch all orders for specific user
 exports.getUserOrders = async (userId, page = 1, limit = 10) => {
   return exports.getAllOrders(page, limit, { user_id: userId });
 };
 
-// Update order status - Validate status, update, log change
 exports.updateOrderStatus = async (orderId, newStatus, auditContext = {}) => {
   const validStatuses = [
     "pending",
@@ -105,32 +140,28 @@ exports.updateOrderStatus = async (orderId, newStatus, auditContext = {}) => {
   }
 
   const order = await Order.findOne({ where: { order_id: orderId } });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
+  if (!order) throw new Error("Order not found");
 
   const oldStatus = order.order_status;
   order.order_status = newStatus;
   await order.save();
 
-  // Log status change
-  await auditUtil.logAction(auditContext.userId, "order_status_changed", {
-    order_id: orderId,
-    old_status: oldStatus,
-    new_status: newStatus,
+  await auditUtil.logAction({
+    userId: auditContext.userId,
+    action: "order_status_changed",
+    details: {
+      order_id: orderId,
+      old_status: oldStatus,
+      new_status: newStatus,
+    },
   });
 
   return await exports.getOrderById(orderId);
 };
 
-// Cancel order - Validate status, change to cancelled
 exports.cancelOrder = async (orderId, reason = "") => {
   const order = await Order.findOne({ where: { order_id: orderId } });
-
-  if (!order) {
-    throw new Error("Order not found");
-  }
+  if (!order) throw new Error("Order not found");
 
   if (["completed", "cancelled"].includes(order.order_status)) {
     throw new Error(`Cannot cancel order with status: ${order.order_status}`);
@@ -142,7 +173,6 @@ exports.cancelOrder = async (orderId, reason = "") => {
   return order;
 };
 
-// Add order item
 exports.addOrderItem = async (orderId, itemId, quantity) => {
   const order = await Order.findOne({ where: { order_id: orderId } });
   if (!order) throw new Error("Order not found");
@@ -165,61 +195,45 @@ exports.addOrderItem = async (orderId, itemId, quantity) => {
       order_id: orderId,
       item_id: itemId,
       quantity,
-      price: menuItem.price, // ✅ đúng tên cột (không phải unit_price)
+      price: menuItem.price,
     });
   }
 
   return orderItem;
 };
 
-// Update order item quantity - Validate & update quantity, recalculate total
 exports.updateOrderItemQuantity = async (orderItemId, newQuantity) => {
   const orderItem = await OrderItem.findOne({ where: { id: orderItemId } });
-
-  if (!orderItem) {
-    throw new Error("Order item not found");
-  }
-
-  if (newQuantity < 1) {
-    throw new Error("Quantity must be at least 1");
-  }
+  if (!orderItem) throw new Error("Order item not found");
+  if (newQuantity < 1) throw new Error("Quantity must be at least 1");
 
   orderItem.quantity = newQuantity;
   await orderItem.save();
-
-  // Recalculate order total
   await exports.recalculateOrderTotal(orderItem.order_id);
 
   return orderItem;
 };
 
-// Remove order item - Delete item, recalculate order total
 exports.removeOrderItem = async (orderItemId) => {
   const orderItem = await OrderItem.findOne({ where: { id: orderItemId } });
-
-  if (!orderItem) {
-    throw new Error("Order item not found");
-  }
+  if (!orderItem) throw new Error("Order item not found");
 
   const orderId = orderItem.order_id;
   await orderItem.destroy();
-
-  // Recalculate order total
   await exports.recalculateOrderTotal(orderId);
 
   return { success: true, message: "Item removed from order" };
 };
 
-// Get order statistics
 exports.getOrderStatistics = async (filters = {}) => {
-  const where = { is_delete: false };
+  const where = {};
 
   if (filters.branch_id) where.branch_id = filters.branch_id;
   if (filters.dateFrom || filters.dateTo) {
-    where.created_at = {};
+    where.order_time = {};
     if (filters.dateFrom)
-      where.created_at[db.Sequelize.Op.gte] = filters.dateFrom;
-    if (filters.dateTo) where.created_at[db.Sequelize.Op.lte] = filters.dateTo;
+      where.order_time[db.Sequelize.Op.gte] = filters.dateFrom;
+    if (filters.dateTo) where.order_time[db.Sequelize.Op.lte] = filters.dateTo;
   }
 
   const total = await Order.count({ where });
@@ -234,18 +248,10 @@ exports.getOrderStatistics = async (filters = {}) => {
     raw: true,
   });
 
-  const totalRevenue = await Order.findOne({
-    where,
-    attributes: [
-      [db.Sequelize.fn("SUM", db.Sequelize.col("total_amount")), "total"],
-    ],
-  });
-
   return {
     total,
     byStatus: Object.fromEntries(
       byStatus.map((s) => [s.order_status, s.count]),
     ),
-    totalRevenue: parseFloat(totalRevenue?.dataValues?.total || 0),
   };
 };

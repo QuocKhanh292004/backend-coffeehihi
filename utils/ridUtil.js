@@ -1,78 +1,28 @@
-/** RID Generator - Sequential RID generation with prefix */
+/** RID Generator - Unique RID generation with prefix + timestamp + random */
 
-const db = require("../models");
+const crypto = require("crypto");
 
-// RID counter storage (in production, use database sequence)
-let ridCounters = {
-  br: 1000,
-  usr: 1000,
-  tbl: 1000,
-  cat: 1000,
-  itm: 1000,
-  ord: 1000,
-  oi: 1000,
-  notif: 1000,
-};
+const VALID_PREFIXES = ["br", "usr", "tbl", "cat", "itm", "ord", "oi", "notif"];
 
 /**
- * Generate sequential RID with given prefix
+ * Generate unique RID with given prefix
+ * Format: prefix-timestamp-randomhex
  * @param {string} prefix - RID prefix (br, usr, tbl, cat, itm, ord, notif)
- * @returns {string} Sequential RID
+ * @returns {string} Unique RID
  */
 exports.generateRid = (prefix) => {
-  if (!ridCounters.hasOwnProperty(prefix)) {
+  if (!VALID_PREFIXES.includes(prefix)) {
     throw new Error(`Invalid RID prefix: ${prefix}`);
   }
-  const newRid = `${prefix}-${ridCounters[prefix]}`;
-  ridCounters[prefix]++;
-  return newRid;
+  const timestamp = Date.now();
+  const random = crypto.randomBytes(4).toString("hex");
+  return `${prefix}-${timestamp}-${random}`;
 };
 
 /**
- * Initialize RID counters from database
- * Sets counter to max existing + 1 for each prefix
+ * Kept for backward compatibility — no longer needed
+ * since RIDs are now generated with timestamp + random
  */
 exports.initializeCounters = async () => {
-  try {
-    const { sequelize } = db;
-
-    // Get max RID for each table
-    const tables = [
-      "branches",
-      "users",
-      "tables",
-      "menu_categories",
-      "menu_items",
-      "orders",
-      "order_items",
-      "notifications",
-    ];
-    const prefixes = ["br", "usr", "tbl", "cat", "itm", "ord", "oi", "notif"];
-
-    ridCounters = {};
-
-    for (let i = 0; i < tables.length; i++) {
-      try {
-        const result = await sequelize.query(
-          `SELECT COALESCE(MAX(CAST(SUBSTRING(rid, POSITION('-' IN rid) + 1) AS UNSIGNED)), 999) as max_num FROM ${tables[i]}`,
-        );
-        const maxNum = result[0][0]?.max_num || 999;
-        ridCounters[prefixes[i]] = maxNum + 1;
-      } catch (err) {
-        // If query fails, start from 1000
-        ridCounters[prefixes[i]] = 1000;
-      }
-    }
-  } catch (error) {
-    // Fallback: reset to 1000
-    ridCounters = {
-      br: 1000,
-      usr: 1000,
-      tbl: 1000,
-      cat: 1000,
-      itm: 1000,
-      ord: 1000,
-      notif: 1000,
-    };
-  }
+  // No-op: không cần counter nữa
 };

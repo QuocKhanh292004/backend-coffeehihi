@@ -141,20 +141,26 @@ app.set("io", io);
 io.on("connection", (socket) => {
   console.log(`⚡ Socket connected: ${socket.id}`);
 
-  // join theo chi nhánh
+  // Join theo chi nhánh (admin/nhân viên)
   socket.on("join_branch", (branch_id) => {
     socket.join(`branch_${branch_id}`);
-    console.log(`👉 joined branch_${branch_id}`);
+    console.log(`👉 Socket ${socket.id} joined branch_${branch_id}`);
   });
 
-  // admin tổng
+  // Join theo bàn (khách hàng nhận trạng thái đơn)
+  socket.on("join_table", (table_id) => {
+    socket.join(`table_${table_id}`);
+    console.log(`👉 Socket ${socket.id} joined table_${table_id}`);
+  });
+
+  // Admin tổng
   socket.on("join_admin", () => {
     socket.join("admin_room");
-    console.log(`👉 joined admin_room`);
+    console.log(`👉 Socket ${socket.id} joined admin_room`);
   });
 
-  socket.on("disconnect", () => {
-    console.log(`❌ Socket disconnected: ${socket.id}`);
+  socket.on("disconnect", (reason) => {
+    console.log(`❌ Socket disconnected: ${socket.id} | Reason: ${reason}`);
   });
 });
 // ============================================

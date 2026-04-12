@@ -3,9 +3,15 @@
 const db = require("../models");
 const logger = require("../middleware/logger");
 const responseUtil = require("../utils/responseUtil");
-const { notificationService } = require("../services");
 const ridUtil = require("../utils/ridUtil");
 const Notification = db.Notification;
+
+const parseStatusAdmin = (val) => {
+  if (val === undefined || val === null || val === "") return undefined;
+  if (val === "unread" || val === "0" || val === 0) return 0;
+  if (val === "read" || val === "1" || val === 1) return 1;
+  return undefined;
+};
 
 // Create notification
 exports.createNotification = async (req, res) => {
@@ -44,54 +50,67 @@ exports.createNotification = async (req, res) => {
   }
 };
 
-// Get notifications by branch
+// Get notifications
 exports.getNotificationsByBranch = async (req, res) => {
   const correlationId = req.correlationId;
   const { branch_id, status_admin } = req.query;
 
-  if (!branch_id) {
-    return res.status(400).json(
-      responseUtil.validationError(req, "Branch ID là bắt buộc", {
-        branch_id: "Branch ID không được để trống",
-      }),
-    );
-  }
-
   try {
-    let whereClause = { branch_id };
+    const whereClause = {};
+    if (branch_id) whereClause.branch_id = branch_id;
 
-    if (status_admin !== undefined) {
-      whereClause.status_admin = status_admin;
-    }
+    const statusNum = parseStatusAdmin(status_admin);
+    if (statusNum !== undefined) whereClause.status_admin = statusNum;
+
+    console.log("=== GET NOTIFICATIONS ===");
+    console.log("whereClause:", whereClause);
+    console.log("db.Order exists:", !!db.Order);
+    console.log(
+      "Notification associations:",
+      Object.keys(Notification.associations || {}),
+    );
+
     const notifications = await Notification.findAll({
       where: whereClause,
-      order: [["sent_time", "DESC"]], // Newest first
+      order: [["sent_time", "DESC"]],
       limit: 50,
-      include: [
-        {
-          model: db.Order,
-          attributes: ["order_id", "rid", "order_status"],
-        },
-      ],
     });
 
-    logger.info("Notifications retrieved successfully", {
-      correlationId,
-      context: { branch_id, count: notifications.length },
+    console.log("Found:", notifications.length);
+
+    const mapped = notifications.map((n) => {
+      const plain = n.toJSON();
+      return {
+        notification_id: plain.notification_id,
+        rid: plain.rid,
+        branch_id: plain.branch_id,
+        order_id: plain.order_id,
+        related_id: plain.order_id,
+        message: `Đơn hàng mới #${plain.order_id}`,
+        status_admin: plain.status_admin === 0 ? "unread" : "read",
+        status_client: plain.status_client === 0 ? "unread" : "read",
+        createdAt: plain.sent_time,
+      };
     });
 
     return res.json(
       responseUtil.success(
         req,
-        `Lấy danh sách ${notifications.length} thông báo thành công`,
-        notifications,
+        `Lấy danh sách ${mapped.length} thông báo thành công`,
+        { notifications: mapped },
       ),
     );
   } catch (error) {
-    logger.error("Get notifications by branch failed", {
+    // ✅ Log thẳng ra terminal
+    console.error("=== GET NOTIFICATIONS ERROR ===");
+    console.error("Message:", error.message);
+    console.error("Name:", error.name);
+    console.error("Stack:", error.stack);
+
+    logger.error("Get notifications failed", {
       correlationId,
-      context: { branch_id },
-      error,
+      message: error.message,
+      stack: error.stack,
     });
     return res
       .status(500)
@@ -105,13 +124,25 @@ exports.getNotificationsByBranch = async (req, res) => {
 exports.updateNotificationStatus = async (req, res) => {
   const correlationId = req.correlationId;
   const { id } = req.params;
-  const { status_admin, status_client } = req.body;
+  const { status_admin } = req.body;
 
   try {
-    const [updatedRows] = await Notification.update(
-      { status_admin, status_client },
-      { where: { notification_id: id } },
-    );
+    const updateData = {};
+
+    const statusNum = parseStatusAdmin(status_admin);
+    if (statusNum !== undefined) updateData.status_admin = statusNum;
+
+    if (Object.keys(updateData).length === 0) {
+      return res
+        .status(400)
+        .json(
+          responseUtil.validationError(req, "Không có dữ liệu để cập nhật"),
+        );
+    }
+
+    const [updatedRows] = await Notification.update(updateData, {
+      where: { notification_id: id },
+    });
 
     if (updatedRows === 0) {
       return res
@@ -123,7 +154,13 @@ exports.updateNotificationStatus = async (req, res) => {
       responseUtil.success(req, "Cập nhật trạng thái thông báo thành công"),
     );
   } catch (error) {
-    logger.error("Update notification status failed", { correlationId, error });
+    console.error("=== UPDATE NOTIFICATION ERROR ===");
+    console.error("Message:", error.message);
+    logger.error("Update notification status failed", {
+      correlationId,
+      message: error.message,
+      stack: error.stack,
+    });
     return res
       .status(500)
       .json(

@@ -9,6 +9,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       rid: { type: DataTypes.STRING(32), unique: true },
       table_id: { type: DataTypes.INTEGER, allowNull: false },
+      branch_id: { type: DataTypes.INTEGER, allowNull: true }, // ✅ Thêm branch_id
       order_status: { type: DataTypes.STRING(50), defaultValue: "pending" },
       order_time: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
       order_message: { type: DataTypes.TEXT, allowNull: true },
@@ -22,6 +23,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Order.associate = (models) => {
     Order.belongsTo(models.Table, { foreignKey: "table_id" });
+    Order.belongsTo(models.Branch, { foreignKey: "branch_id" }); // ✅ Thêm association Branch
     Order.hasMany(models.OrderItem, {
       foreignKey: "order_id",
       as: "OrderItems",
