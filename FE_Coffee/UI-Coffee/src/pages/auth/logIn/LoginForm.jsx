@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import config from '../../../config';
 
 const LoginForm = ({ onLoginSuccess, onError, isLoading }) => {
-    const [email, setEmail] = useState('tranquockhanh20049@gmail.com');
-    const [password, setPassword] = useState('Khanh@123');
+    const [email, setEmail] = useState('k22kk22ktj+2@gmail.com');
+    const [password, setPassword] = useState('Admin@123456');
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = (e) => {
@@ -26,7 +26,6 @@ const LoginForm = ({ onLoginSuccess, onError, isLoading }) => {
                     required
                 />
             </div>
-
             {/* Password */}
             <div>
                 <label className="block text-sm font-bold mb-2">Mật khẩu</label>

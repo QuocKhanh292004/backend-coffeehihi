@@ -15,6 +15,7 @@ const routes = {
     statistics: '/statistics',
     table: '/table',
     customer: '/customer',
+    customerOrder: '/customer/:branch_id/:table_id',
     settings: '/settings',
     notfound:'/notfound',
     help:'/help'

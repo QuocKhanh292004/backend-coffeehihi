@@ -15,6 +15,7 @@ import AccountPage from "../pages/account";
 import StatisticsPage from "../pages/statistics";
 // CUSTOMER
 import PageCustomer from "../pagescustomer/customer/index.jsx";
+
 import settings from "../pages/settings/Settings.jsx";
 
 // 404
@@ -30,6 +31,7 @@ export const publicRoutes = [
     { path: routes.resetPassword, component: ResetPassword },
     { path: routes.verifyOpt, component: VerifyOTP },
     {path: routes.customer, component: PageCustomer},
+    { path: routes.customerOrder, component: PageCustomer },
     {path: routes.notfound, component: NotFound},
     {path:routes.help, component:NotFound }
 ];

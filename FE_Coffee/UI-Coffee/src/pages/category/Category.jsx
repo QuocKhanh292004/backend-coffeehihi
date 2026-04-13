@@ -62,7 +62,7 @@ const CategoryManagement = () => {
             }
             setLoading(prev => ({ ...prev, categories: true }));
             try {
-                const response = await request.get(`http://localhost:3000/api/menu/categories?branch_id=${branchId}`);
+                const response = await request.get(`/menu/categories?branch_id=${branchId}`);
                 console.log('Full Response:', response);
 
                 const categories = response.data?.data || response.data || [];

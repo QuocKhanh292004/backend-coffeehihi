@@ -1,27 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faSearch,
-    faShoppingCart,
-    faBell,
-    faUser,
-} from '@fortawesome/free-solid-svg-icons';
+import { faSearch, faUser } from '@fortawesome/free-solid-svg-icons';
 import CategorySidebar from './CategorySidebar';
 import MenuList from './MenuList';
 import OrderPanel from './OrderPanel';
-import ItemDetailModal from './ItemDetailModal';   // ✅ import modal mới
+import ItemDetailModal from './ItemDetailModal';
+import Notification from '../../components/notification';
 import useCategoryManagement from "../../pages/category/Usecategory/useCategory.js";
 import { getBeverages } from "../../apiServices/beverageServices.js";
+import { getTables } from "../../apiServices/tablesServices.js";
+import { useNavigate } from "react-router-dom";
+import CustomerNotification from './CustomerNotification.jsx';
 
-const Possystem = () => {
+const Possystem = ({ branch_id, table_id }) => {
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [selectedTable, setSelectedTable] = useState('Bàn 5');
+    const [selectedTable, setSelectedTable] = useState(null);
+    const [tables, setTables] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [cart, setCart] = useState([]);
-    const [selectedItem, setSelectedItem] = useState(null);  // item đang xem modal
+    const [selectedItem, setSelectedItem] = useState(null);
     const [menuItems, setMenuItems] = useState([]);
     const [loadingMenu, setLoadingMenu] = useState(false);
 
+    const navigate = useNavigate();
     const { data, loading, handleChangeBranch } = useCategoryManagement();
 
     const COLORS = [
@@ -31,7 +32,7 @@ const Possystem = () => {
         'from-blue-400 to-cyan-500',
         'from-amber-600 to-amber-700',
         'from-orange-400 to-red-500',
-        'from-pink-400 to-pink-500',
+        'from-pink-400 to-pink-500'
     ];
 
     const categories = [
@@ -45,21 +46,46 @@ const Possystem = () => {
     ];
 
     useEffect(() => {
+        if (branch_id) {
+            handleChangeBranch(branch_id);
+        }
+        if (table_id) {
+            setSelectedTable(Number(table_id));
+        }
+    }, [branch_id, table_id]);
+
+    useEffect(() => {
         if (!data.selectedBranch) return;
+
         const fetchMenuItems = async () => {
             setLoadingMenu(true);
             try {
                 const items = await getBeverages(selectedCategory, data.selectedBranch);
                 setMenuItems(Array.isArray(items) ? items : []);
             } catch (error) {
-                console.error('Error fetching menu items:', error);
                 setMenuItems([]);
             } finally {
                 setLoadingMenu(false);
             }
         };
+
         fetchMenuItems();
     }, [data.selectedBranch, selectedCategory]);
+
+    useEffect(() => {
+        if (!data.selectedBranch) return;
+
+        const fetchTables = async () => {
+            const tablesData = await getTables(data.selectedBranch);
+            setTables(tablesData);
+
+            if (!table_id) {
+                setSelectedTable(null);
+            }
+        };
+
+        fetchTables();
+    }, [data.selectedBranch]);
 
     const normalizedItems = menuItems.map(item => ({
         id: item.item_id,
@@ -74,12 +100,8 @@ const Possystem = () => {
         item.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    // ✅ Chỉ mở modal khi click card
-    const handleSelectItem = (item) => {
-        setSelectedItem(item);
-    };
+    const handleSelectItem = (item) => setSelectedItem(item);
 
-    // ✅ Thêm vào giỏ hàng (gọi từ modal sau khi chọn options)
     const addToCart = (itemWithOptions) => {
         setCart((prev) => {
             const existing = prev.find((c) => c.id === itemWithOptions.id);
@@ -104,15 +126,20 @@ const Possystem = () => {
         }
     };
 
-    const removeFromCart = (id) => {
+    const removeFromCart = (id) =>
         setCart(cart.filter(item => item.id !== id));
-    };
 
-    // ✅ Gửi đơn hàng
     const handleSubmitOrder = () => {
-        console.log('Gửi đơn:', cart);
-        // TODO: gọi API gửi đơn ở đây
-        alert('Đơn hàng đã được gửi!');
+        const branch = Number(data.selectedBranch);
+        console.log("branch nhánh nè", branch);
+        const table = Number(selectedTable);
+
+        if (!branch || !table) {
+            alert("Vui lòng chọn chi nhánh và bàn!");
+            return;
+        }
+
+        navigate(`/customer/${branch}/${table}`);
         setCart([]);
     };
 
@@ -120,26 +147,26 @@ const Possystem = () => {
 
     return (
         <div className="flex h-screen bg-gray-50 overflow-hidden">
-            {/* Left Sidebar */}
             <CategorySidebar
                 categories={categories}
                 selectedCategory={selectedCategory}
                 onSelectCategory={setSelectedCategory}
             />
 
-            {/* Middle Section */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
                 <div className="bg-white shadow-sm px-6 py-4 border-b border-gray-100">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+
                         <div className="flex flex-col sm:flex-row gap-3">
+                            {/* Branch */}
                             <select
-                                value={data.selectedBranch}
+                                value={data.selectedBranch || ''}
                                 onChange={(e) => handleChangeBranch(e.target.value)}
-                                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
+                                className="px-4 py-2.5 bg-gray-50 border rounded-lg text-sm"
                             >
                                 {loading.branches ? (
-                                    <option>Đang tải...</option>
+                                    <option>Đang tải chi nhánh...</option>
                                 ) : (
                                     data.branches.map(branch => (
                                         <option key={branch.branch_id} value={branch.branch_id}>
@@ -149,75 +176,72 @@ const Possystem = () => {
                                 )}
                             </select>
 
+                            {/* Table */}
                             <select
-                                value={selectedTable}
-                                onChange={(e) => setSelectedTable(e.target.value)}
-                                className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
+                                value={selectedTable || ''}
+                                onChange={(e) => setSelectedTable(Number(e.target.value))}
+                                className="px-4 py-2.5 bg-gray-50 border rounded-lg text-sm"
                             >
-                                <option>Bàn 5</option>
-                                <option>Bàn 1</option>
-                                <option>Bàn 2</option>
+                                <option value="" disabled>-- Chọn bàn --</option>
+                                {tables.map(table => (
+                                    <option
+                                        key={table.table_id}
+                                        value={table.table_id}
+                                        disabled={table.status !== "available"}
+                                    >
+                                        {table.table_name}
+                                        {table.status !== "available" ? " (Có khách)" : ""}
+                                    </option>
+                                ))}
                             </select>
                         </div>
 
+                        {/* Search */}
                         <div className="relative flex-1 max-w-md">
-                            <FontAwesomeIcon
-                                icon={faSearch}
-                                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"
-                            />
+                            <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-3 text-gray-400" />
                             <input
                                 type="text"
                                 placeholder="Tìm kiếm..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all"
+                                className="w-full pl-10 pr-4 py-2 border rounded-lg"
                             />
                         </div>
 
+
                         <div className="flex items-center gap-3">
-                            <button className="relative p-2.5 hover:bg-gray-100 rounded-lg transition-colors">
-                                <FontAwesomeIcon icon={faBell} className="text-gray-600 text-lg" />
-                                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                            </button>
-                            {/*<button className="p-2.5 hover:bg-gray-100 rounded-lg transition-colors">*/}
-                            {/*    <FontAwesomeIcon icon={faShoppingCart} className="text-gray-600 text-lg" />*/}
-                            {/*</button>*/}
-                            <div className="w-10 h-10 bg-gradient-to-br from-pink-400 to-orange-400 rounded-full flex items-center justify-center">
-                                <FontAwesomeIcon icon={faUser} className="text-white text-sm" />
-                            </div>
+                            {console.log('nhánh chọn', data.selectedBranch, typeof data.selectedBranch)}
+                            <CustomerNotification
+                                branch_id={Number(data.selectedBranch) || null}
+                                table_id={selectedTable}
+                            />
+                            <FontAwesomeIcon icon={faUser} />
                         </div>
                     </div>
                 </div>
 
-                {/* Menu Items */}
+                {/* Menu */}
                 {loadingMenu ? (
-                    <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-                        Đang tải món...
-                    </div>
-                ) : filteredItems.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400">
-                        <div className="text-6xl mb-4">🔍</div>
-                        <p className="text-lg font-medium">Không tìm thấy sản phẩm</p>
-                    </div>
+                    <div className="flex-1 flex items-center justify-center">Đang tải...</div>
                 ) : (
                     <MenuList
                         items={filteredItems}
-                        onSelectItem={handleSelectItem}   // ✅ đổi prop
+                        onSelectItem={handleSelectItem}
                         selectedItem={selectedItem}
                     />
                 )}
             </div>
 
-            {/* Right Panel */}
             <OrderPanel
                 cart={cart}
                 total={total}
                 onUpdateQuantity={updateQuantity}
                 onRemoveFromCart={removeFromCart}
-                onSubmitOrder={handleSubmitOrder}  // ✅ thêm prop
+                onSubmitOrder={handleSubmitOrder}
+                table_id={selectedTable}
+                branch_id={data.selectedBranch}
             />
 
-            {/* ✅ Modal hiển thị giữa màn hình */}
             {selectedItem && (
                 <ItemDetailModal
                     item={selectedItem}
