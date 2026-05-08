@@ -3,13 +3,12 @@ import { Link } from 'react-router-dom';
 import config from '../../../config';
 
 const LoginForm = ({ onLoginSuccess, onError, isLoading }) => {
-    const [email, setEmail] = useState('k22kk22ktj+2@gmail.com');
+    const [email, setEmail] = useState('tranquockhanh2920049@gmail.com');
     const [password, setPassword] = useState('Admin@123456');
     const [showPassword, setShowPassword] = useState(false);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Logic will be handled in parent component
         onLoginSuccess({ email, password });
     };
 
