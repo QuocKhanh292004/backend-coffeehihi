@@ -1,20 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-    faBell, faXmark, faCircleCheck, faClock,
-    faTruckFast, faBan, faFire
-} from '@fortawesome/free-solid-svg-icons';
+import { faBell, faXmark } from '@fortawesome/free-solid-svg-icons';
 import socket from '../../utils/socket.js';
-
-// ─── Config trạng thái ───────────────────────────────────────
-const STATUS_CONFIG = {
-    pending:   { label: 'Chờ xác nhận', icon: faClock,       color: 'text-yellow-500', bg: 'bg-yellow-50',  border: 'border-yellow-200', dot: 'bg-yellow-400' },
-    confirmed: { label: 'Đã xác nhận',  icon: faTruckFast,   color: 'text-blue-500',   bg: 'bg-blue-50',    border: 'border-blue-200',   dot: 'bg-blue-400'   },
-    preparing: { label: 'Đang pha chế', icon: faFire,         color: 'text-orange-500', bg: 'bg-orange-50',  border: 'border-orange-200', dot: 'bg-orange-400' },
-    ready:     { label: 'Sẵn sàng',     icon: faTruckFast,   color: 'text-cyan-500',   bg: 'bg-cyan-50',    border: 'border-cyan-200',   dot: 'bg-cyan-400'   },
-    completed: { label: 'Hoàn thành',   icon: faCircleCheck, color: 'text-green-500',  bg: 'bg-green-50',   border: 'border-green-200',  dot: 'bg-green-400'  },
-    cancelled: { label: 'Đã huỷ',       icon: faBan,         color: 'text-red-500',    bg: 'bg-red-50',     border: 'border-red-200',    dot: 'bg-red-400'    },
-};
+import { STATUS_CONFIG } from '../../constants/constant.js';
 
 // ─── Toast component ─────────────────────────────────────────
 function Toast({ notification, onClose }) {
@@ -26,8 +14,10 @@ function Toast({ notification, onClose }) {
     }, []);
 
     return (
-        <div className={`flex items-start gap-3 px-4 py-3 rounded-2xl shadow-2xl border ${cfg.bg} ${cfg.border} min-w-[280px] max-w-sm animate-slide-in`}>
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.color} bg-white shadow-sm`}>
+        <div
+            className={`flex items-start gap-3 px-4 py-3 rounded-2xl shadow-2xl border ${cfg.bg} ${cfg.border} min-w-[280px] max-w-sm animate-slide-in`}>
+            <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${cfg.color} bg-white shadow-sm`}>
                 <FontAwesomeIcon icon={cfg.icon} />
             </div>
             <div className="flex-1 min-w-0">
@@ -46,10 +36,11 @@ function Toast({ notification, onClose }) {
 
 // ─── CustomerNotification chính ──────────────────────────────
 function CustomerNotification({ branch_id, table_id }) {
-    const [open, setOpen]           = useState(false);
-    const [notifications, setNoti]  = useState([]);
-    const [toasts, setToasts]       = useState([]);
-    const dropdownRef               = useRef(null);
+    const [open, setOpen] = useState(false);
+    const [notifications, setNoti] = useState([]);
+    const [toasts, setToasts] = useState([]);
+    const dropdownRef = useRef(null);
+    const seenRef = useRef({ set: new Set(), queue: [] });
 
     // ✅ Socket: connect + join branch + join table
     useEffect(() => {
@@ -60,18 +51,35 @@ function CustomerNotification({ branch_id, table_id }) {
                 socket.emit('join_branch', branch_id);
             }
             if (table_id) {
-                // ✅ Join room riêng cho bàn này để nhận thông báo trạng thái
                 socket.emit('join_table', table_id);
-                console.log('👉 Joined table:', table_id);
             }
         };
 
         if (socket.connected) joinRooms();
+        socket.off('connect', joinRooms);
         socket.on('connect', joinRooms);
 
         // ✅ Lắng nghe cập nhật trạng thái đơn hàng
         const handleStatusUpdate = (data) => {
             console.log('📦 Order status updated:', data);
+
+            const keyParts = [
+                data.notification_id,
+                data.order_id,
+                data.new_status,
+                data.timestamp,
+                data.message,
+            ].filter(Boolean);
+            const key = keyParts.length ? keyParts.join('|') : JSON.stringify(data);
+
+            const { set, queue } = seenRef.current;
+            if (set.has(key)) return;
+            set.add(key);
+            queue.push(key);
+            if (queue.length > 50) {
+                const old = queue.shift();
+                if (old) set.delete(old);
+            }
 
             const noti = {
                 id: Date.now(),
@@ -87,6 +95,7 @@ function CustomerNotification({ branch_id, table_id }) {
             setToasts(prev => [...prev, noti]);
         };
 
+        socket.off('order_status_updated', handleStatusUpdate);
         socket.on('order_status_updated', handleStatusUpdate);
 
         return () => {
@@ -121,8 +130,8 @@ function CustomerNotification({ branch_id, table_id }) {
         const d = new Date(dateStr);
         const now = new Date();
         const diff = Math.floor((now - d) / 1000);
-        if (diff < 60)    return 'Vừa xong';
-        if (diff < 3600)  return `${Math.floor(diff / 60)} phút trước`;
+        if (diff < 60) return 'Vừa xong';
+        if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
         return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
     };
 
@@ -131,12 +140,16 @@ function CustomerNotification({ branch_id, table_id }) {
             {/* ── Nút chuông ── */}
             <div className="relative" ref={dropdownRef}>
                 <button
-                    onClick={() => { setOpen(o => !o); if (!open) markAllRead(); }}
+                    onClick={() => {
+                        setOpen(o => !o);
+                        if (!open) markAllRead();
+                    }}
                     className="w-10 h-10 flex items-center justify-center border border-gray-200 rounded-xl hover:bg-gray-50 text-gray-600 transition-all relative shadow-sm"
                 >
                     <FontAwesomeIcon icon={faBell} className="text-[16px]" />
                     {unreadCount > 0 && (
-                        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
+                        <span
+                            className="absolute -top-1 -right-1 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 border-2 border-white">
                             {unreadCount > 9 ? '9+' : unreadCount}
                         </span>
                     )}
@@ -144,7 +157,8 @@ function CustomerNotification({ branch_id, table_id }) {
 
                 {/* ── Dropdown ── */}
                 {open && (
-                    <div className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
+                    <div
+                        className="absolute right-0 top-12 w-80 bg-white rounded-2xl shadow-2xl border border-slate-100 z-50 overflow-hidden">
                         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
                             <div>
                                 <h3 className="font-black text-slate-800 text-sm">Trạng thái đơn hàng</h3>
@@ -174,7 +188,8 @@ function CustomerNotification({ branch_id, table_id }) {
                                             key={noti.id}
                                             className={`px-5 py-4 border-b border-slate-50 flex gap-3 items-start ${!noti.read ? cfg.bg : ''}`}
                                         >
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white shadow-sm ${cfg.color}`}>
+                                            <div
+                                                className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 bg-white shadow-sm ${cfg.color}`}>
                                                 <FontAwesomeIcon icon={cfg.icon} className="text-sm" />
                                             </div>
                                             <div className="flex-1 min-w-0">
@@ -191,7 +206,8 @@ function CustomerNotification({ branch_id, table_id }) {
                                                 </div>
                                             </div>
                                             {!noti.read && (
-                                                <span className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 ${cfg.dot}`}></span>
+                                                <span
+                                                    className={`w-2 h-2 rounded-full flex-shrink-0 mt-2 ${cfg.dot}`}></span>
                                             )}
                                         </div>
                                     );

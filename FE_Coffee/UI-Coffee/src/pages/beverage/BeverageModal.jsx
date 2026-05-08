@@ -125,10 +125,24 @@ const BeverageModal = ({ isOpen, onClose, mode, initialData, onSave, categories,
                             Giá <span className="text-red-500">*</span>
                         </label>
                         <input
-                            type="number"
+                            type="text"
                             name="price"
                             value={formData.price}
-                            onChange={handleInputChange}
+                            onChange={(e) => {
+                                const value = e.target.value
+                                    .replace(/\D/g, '')
+                                    .slice(0, 9);
+
+                                setFormData(prev => ({
+                                    ...prev,
+                                    price: value
+                                }));
+                            }}
+                            onBeforeInput={(e) => {
+                                if (!/^\d+$/.test(e.data)) {
+                                    e.preventDefault();
+                                }
+                            }}
                             className="w-full border border-slate-200 rounded-xl px-4 py-2.5 outline-none focus:border-emerald-500 transition-all duration-200 text-sm text-slate-600"
                             placeholder="Nhập giá"
                             min="0"

@@ -169,7 +169,7 @@ const Beverage = () => {
                     item_name: formData.name,
                     price: parseFloat(formData.price) || 0,
                     item_description: formData.description || '',
-                    category_id: parseInt(formData.category) || 0,
+                    category_id: parseInt(formData.category) || 1,
                     branch_id: parseInt(formData.branch) || 0,
                     is_disable: formData.isOutOfStock || false,
                     imageFile: formData.imageFile || null   // ✅ File object, không phải base64
