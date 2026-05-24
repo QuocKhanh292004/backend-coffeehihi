@@ -12,6 +12,27 @@ const statusOrder = [
     { key: "completed", name: "Đã hoàn thành",icon: faCircleCheck },
 ];
 
+/* ── Lấy giá của 1 order item theo thứ tự ưu tiên ── */
+const getItemPrice = (item) => {
+    // API trả về item.price là giá thực tế lúc đặt (string "25000.00")
+    if (item.price != null)            return Number(item.price);
+    // fallback: giá từ quan hệ menuItem
+    const rel = item.menuItem ?? item.MenuItem ?? {};
+    if (rel.price != null)             return Number(rel.price);
+    return 0;
+};
+
+/* ── Lấy ghi chú của 1 order item ── */
+const getItemNote = (item) =>
+    item.note ?? item.notes ?? item.item_note ?? item.item_notes ?? null;
+
+/* ── Lấy ghi chú đơn hàng ── */
+const getOrderNote = (data) => {
+    const n = data.order_note ?? data.notes ?? data.note ?? null;
+    // Chuỗi rỗng "" coi như không có ghi chú
+    return n && n.trim() !== '' ? n : null;
+};
+
 function OrderDetails({ order, onClose, onStatusChange }) {
     const [detail, setDetail]     = useState(null);
     const [loading, setLoading]   = useState(true);
@@ -22,7 +43,9 @@ function OrderDetails({ order, onClose, onStatusChange }) {
             setLoading(true);
             try {
                 const res = await getOrderDetailService(order.order_id);
-                setDetail(res?.data?.order ?? res?.data ?? null);
+                const fetched = res?.data?.data ?? res?.data?.order ?? null;
+
+                setDetail(fetched);
             } catch (err) {
                 console.error("Lỗi lấy chi tiết đơn:", err);
             } finally {
@@ -36,7 +59,6 @@ function OrderDetails({ order, onClose, onStatusChange }) {
         setUpdating(true);
         try {
             await updateOrderStatusService(order.order_id, newStatus);
-            // ✅ Cập nhật đúng field order_status
             setDetail(prev => prev ? { ...prev, order_status: newStatus } : prev);
             onStatusChange?.();
         } catch (err) {
@@ -58,16 +80,14 @@ function OrderDetails({ order, onClose, onStatusChange }) {
 
     const data   = detail ?? order;
     const items  = detail?.OrderItems ?? detail?.items ?? [];
-
-    // ✅ Đọc đúng field order_status (không phải status)
     const status = data?.order_status ?? "pending";
     const currentStatusIndex = statusOrder.findIndex(s => s.key === status);
 
     const subTotal = items.reduce((sum, item) => {
-        const price = Number(item.menuItem?.price ?? item.MenuItem?.price ?? item.price ?? 0);
-        const qty   = Number(item.quantity ?? 1);
-        return sum + price * qty;
+        return sum + getItemPrice(item) * Number(item.quantity ?? 1);
     }, 0);
+
+    const orderNote = getOrderNote(data);
 
     return (
         <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
@@ -87,9 +107,10 @@ function OrderDetails({ order, onClose, onStatusChange }) {
                 ) : (
                     <div className="flex flex-col md:flex-row h-full max-h-[85vh]">
 
-                        {/* CỘT TRÁI */}
+                        {/* ══ CỘT TRÁI ══ */}
                         <div className="flex-1 p-8 border-r border-slate-100 overflow-y-auto">
 
+                            {/* Header */}
                             <div className="flex items-center gap-3 mb-8">
                                 <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-100">
                                     <FontAwesomeIcon icon={faReceipt} size="lg" />
@@ -99,7 +120,6 @@ function OrderDetails({ order, onClose, onStatusChange }) {
                                         Đơn hàng #{data.order_id}
                                     </h1>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                                        {/* ✅ Dùng order_time — đúng tên cột trong model */}
                                         {formatDate(data.order_time ?? data.createdAt ?? data.created_at)}
                                         {(data.Branch?.branch_name ?? data.branch_name) && (
                                             <span className="ml-2">· {data.Branch?.branch_name ?? data.branch_name}</span>
@@ -140,7 +160,9 @@ function OrderDetails({ order, onClose, onStatusChange }) {
 
                             {/* Danh sách món */}
                             <div>
-                                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Danh sách món</h2>
+                                <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">
+                                    Danh sách món
+                                </h2>
                                 <div className="bg-slate-50/50 rounded-3xl p-2 border border-slate-100">
                                     {items.length === 0 ? (
                                         <p className="text-center text-sm text-slate-400 py-6">Không có món nào</p>
@@ -148,30 +170,51 @@ function OrderDetails({ order, onClose, onStatusChange }) {
                                         <table className="w-full text-left">
                                             <tbody className="divide-y divide-slate-100">
                                             {items.map((item, idx) => {
-                                                // ✅ Đọc đúng alias menuItem (chữ thường) theo service
-                                                const name  = item.menuItem?.item_name ?? item.MenuItem?.item_name ?? item.item_name ?? "—";
-                                                const img   = item.menuItem?.item_image ?? item.MenuItem?.item_image ?? null;
-                                                const price = Number(item.menuItem?.price ?? item.MenuItem?.price ?? item.price ?? 0);
+                                                // API: item.menuItem chứa item_name; item.price là giá thực tế
+                                                const rel   = item.menuItem ?? item.MenuItem ?? {};
+                                                const name  = rel.item_name ?? item.item_name ?? "—";
+                                                // API hiện tại không trả item_image trong menuItem → dùng placeholder
+                                                const img   = rel.item_image ?? item.item_image ?? null;
+                                                const price = getItemPrice(item);  // item.price ưu tiên
                                                 const qty   = Number(item.quantity ?? 1);
-                                                const note  = item.note ?? null;
+                                                // item.note = null nghĩa là không có ghi chú
+                                                const note  = item.note && item.note.trim() !== '' ? item.note : null;
 
                                                 return (
-                                                    <tr key={idx}>
+                                                    <tr key={item.order_item_id ?? idx} className="border-b border-slate-100 last:border-0">
                                                         <td className="py-3 px-2">
                                                             <div className="flex items-center gap-3">
                                                                 {img ? (
-                                                                    <img src={img} alt={name} className="w-10 h-10 rounded-xl object-cover shadow-sm flex-shrink-0" />
+                                                                    <img
+                                                                        src={img}
+                                                                        alt={name}
+                                                                        className="w-10 h-10 rounded-xl object-cover shadow-sm flex-shrink-0"
+                                                                    />
                                                                 ) : (
-                                                                    <div className="w-10 h-10 rounded-xl bg-slate-200 flex items-center justify-center text-slate-400 text-xs flex-shrink-0">?</div>
+                                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-400 text-lg flex-shrink-0">
+                                                                        ☕
+                                                                    </div>
                                                                 )}
-                                                                <div>
-                                                                    <p className="font-bold text-slate-700 text-sm leading-tight">{name}</p>
-                                                                    {note && <p className="text-[10px] text-rose-500 italic font-medium">"{note}"</p>}
+                                                                <div className="min-w-0">
+                                                                    <p className="font-bold text-slate-700 text-sm leading-tight truncate">{name}</p>
+                                                                    <p className="text-[11px] text-slate-400 mt-0.5">
+                                                                        {formatMoney(price)} / ly
+                                                                    </p>
+                                                                    {/* Ghi chú từng món — chỉ hiện khi có */}
+                                                                    {note && (
+                                                                        <p className="text-[10px] text-rose-500 italic font-medium mt-0.5">
+                                                                            📝 {note}
+                                                                        </p>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="py-3 px-2 text-center font-black text-slate-400 text-xs">x{qty}</td>
-                                                        <td className="py-3 px-2 text-right font-bold text-slate-800 text-sm">{formatMoney(price * qty)}</td>
+                                                        <td className="py-3 px-2 text-center font-black text-slate-400 text-xs whitespace-nowrap">
+                                                            ×{qty}
+                                                        </td>
+                                                        <td className="py-3 px-2 text-right font-bold text-slate-800 text-sm whitespace-nowrap">
+                                                            {formatMoney(price * qty)}
+                                                        </td>
                                                     </tr>
                                                 );
                                             })}
@@ -182,22 +225,25 @@ function OrderDetails({ order, onClose, onStatusChange }) {
                             </div>
                         </div>
 
-                        {/* CỘT PHẢI */}
+                        {/* ══ CỘT PHẢI ══ */}
                         <div className="w-full md:w-80 bg-slate-50/80 p-8 flex flex-col justify-between">
                             <div>
-                                {/* Ghi chú */}
+                                {/* Ghi chú đơn hàng */}
                                 <div className="mb-8">
                                     <div className="flex items-center gap-2 mb-3 text-slate-800">
                                         <FontAwesomeIcon icon={faPenToSquare} className="text-indigo-500" />
                                         <h3 className="text-sm font-black uppercase tracking-wider">Ghi chú đơn</h3>
                                     </div>
                                     <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
-                                        <p className="text-xs text-slate-500 leading-relaxed italic">
-                                            {/* field order_note */}
-                                            {data.order_note
-                                                ? `"${data.order_note}"`
-                                                : "Không có ghi chú nào."}
-                                        </p>
+                                        {orderNote && orderNote.trim() !== '' ? (
+                                            <p className="text-xs text-slate-600 leading-relaxed italic">
+                                                "{orderNote}"
+                                            </p>
+                                        ) : (
+                                            <p className="text-xs text-slate-400 leading-relaxed italic">
+                                                Không có ghi chú nào.
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
@@ -220,7 +266,7 @@ function OrderDetails({ order, onClose, onStatusChange }) {
                                     </div>
                                 </div>
 
-                                {/* Action buttons — dùng order_status, đơn confirmed không hiện nút xác nhận */}
+                                {/* Action buttons */}
                                 <div className="mt-6 space-y-2">
                                     {status === "pending" && (
                                         <button

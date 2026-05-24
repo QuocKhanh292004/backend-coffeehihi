@@ -22,3 +22,8 @@ export const updateOrderStatusService = async (orderId, status) => {
 export const deleteOrderService = async (orderId) => {
     return await request.delete(`/orders/${orderId}`);
 };
+export const getDashboardStatsService = async ({ branch_id } = {}) => {
+    const params = {};
+    if (branch_id) params.branch_id = branch_id;
+    return await request.get('/orders/stats/dashboard', { params });
+};
