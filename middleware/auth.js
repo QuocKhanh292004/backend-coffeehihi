@@ -256,6 +256,11 @@ exports.hasPermission = (permission) => {
     const correlationId = req.correlationId;
 
     try {
+      // Bỏ qua auth cho API /customer
+      if (req.originalUrl.startsWith("/customer")) {
+        return next();
+      }
+
       if (!req.user) {
         return res
           .status(401)
@@ -267,8 +272,12 @@ exports.hasPermission = (permission) => {
       if (!permissions[permission]) {
         logger.warn("Permission denied", {
           correlationId,
-          context: { userId: req.user.user_id, requiredPermission: permission },
+          context: {
+            userId: req.user.user_id,
+            requiredPermission: permission,
+          },
         });
+
         return res
           .status(403)
           .json(
@@ -278,14 +287,17 @@ exports.hasPermission = (permission) => {
 
       next();
     } catch (error) {
-      logger.error("Permission check failed", { correlationId, error });
+      logger.error("Permission check failed", {
+        correlationId,
+        error,
+      });
+
       return res
         .status(500)
         .json(responseUtil.serverError(req, "Lỗi server khi kiểm tra quyền."));
     }
   };
 };
-
 // Check if user role is active
 exports.isRoleActive = (req, res, next) => {
   const correlationId = req.correlationId;

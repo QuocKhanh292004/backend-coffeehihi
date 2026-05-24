@@ -2,7 +2,11 @@
 const express = require("express");
 const router = express.Router();
 const tableController = require("../controllers/tableController");
-const { verifyToken, isAdminOrManager } = require("../middleware/auth");
+const {
+  verifyToken,
+  isAdminOrManager,
+  verifyTokenOptional,
+} = require("../middleware/auth");
 
 /**
  * @swagger
@@ -52,7 +56,7 @@ const { verifyToken, isAdminOrManager } = require("../middleware/auth");
  *         $ref: '#/components/responses/BadRequest'
  */
 router.post("/", verifyToken, isAdminOrManager, tableController.createTable);
-router.get("/", verifyToken, tableController.getAllTablesByBranch);
+router.get("/", verifyTokenOptional, tableController.getAllTablesByBranch);
 
 /**
  * @swagger

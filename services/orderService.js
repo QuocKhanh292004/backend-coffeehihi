@@ -6,7 +6,6 @@ const ridUtil = require("../utils/ridUtil");
 
 const { Order, OrderItem, MenuItem } = db;
 
-// ✅ Helper: tính total_price từ OrderItems
 const calcTotal = (orderItems = []) => {
   return orderItems.reduce((sum, item) => {
     return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1);
@@ -34,6 +33,7 @@ exports.getOrderById = async (orderId) => {
       {
         model: OrderItem,
         as: "OrderItems",
+        // ✅ Bỏ attributes để lấy tất cả fields (bao gồm note)
         include: [
           {
             model: MenuItem,
@@ -42,7 +42,6 @@ exports.getOrderById = async (orderId) => {
           },
         ],
       },
-      // ✅ Include Branch và Table
       {
         model: db.Branch,
         as: "Branch",
@@ -58,14 +57,12 @@ exports.getOrderById = async (orderId) => {
 
   if (!order) throw new Error("Order not found");
 
-  // ✅ Gắn total_price vào order
   const plain = order.toJSON();
   plain.total_price = calcTotal(plain.OrderItems);
 
   return plain;
 };
 
-// ✅ getAllOrders — include Branch, Table, tính total_price
 exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
   const offset = (page - 1) * limit;
   const where = {};
@@ -80,7 +77,14 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
       {
         model: OrderItem,
         as: "OrderItems",
-        attributes: ["quantity", "price"],
+        // ✅ Bỏ attributes để lấy tất cả fields (bao gồm note)
+        include: [
+          {
+            model: MenuItem,
+            as: "menuItem",
+            attributes: ["item_id", "item_name", "price"],
+          },
+        ],
       },
       {
         model: db.Branch,
@@ -96,10 +100,9 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
     limit,
     offset,
     order: [["order_time", "DESC"]],
-    distinct: true, // ✅ tránh count sai khi có include
+    distinct: true,
   });
 
-  // ✅ Tính total_price cho từng order
   const orders = rows.map((row) => {
     const plain = row.toJSON();
     plain.total_price = calcTotal(plain.OrderItems);
@@ -173,7 +176,13 @@ exports.cancelOrder = async (orderId, reason = "") => {
   return order;
 };
 
-exports.addOrderItem = async (orderId, itemId, quantity) => {
+exports.addOrderItem = async (
+  orderId,
+  itemId,
+  quantity,
+  price = null,
+  note = null,
+) => {
   const order = await Order.findOne({ where: { order_id: orderId } });
   if (!order) throw new Error("Order not found");
 
@@ -182,12 +191,17 @@ exports.addOrderItem = async (orderId, itemId, quantity) => {
 
   if (quantity < 1) throw new Error("Quantity must be at least 1");
 
+  // ✅ Dùng price từ frontend nếu có (đã gồm topping), fallback về menuItem.price
+  const finalPrice = price != null ? price : menuItem.price;
+
   let orderItem = await OrderItem.findOne({
     where: { order_id: orderId, item_id: itemId },
   });
 
   if (orderItem) {
     orderItem.quantity += quantity;
+    // ✅ Cập nhật note nếu có
+    if (note != null) orderItem.note = note;
     await orderItem.save();
   } else {
     orderItem = await OrderItem.create({
@@ -195,7 +209,8 @@ exports.addOrderItem = async (orderId, itemId, quantity) => {
       order_id: orderId,
       item_id: itemId,
       quantity,
-      price: menuItem.price,
+      price: finalPrice, // ✅ giá thực từ frontend
+      note: note ?? null, // ✅ ghi chú từng món
     });
   }
 
@@ -260,12 +275,8 @@ exports.getDashboardStats = async (filters = {}) => {
   const where = {};
   if (filters.branch_id) where.branch_id = filters.branch_id;
 
-  //TODO: trả doanh thu theo tháng, năm, tổng số sản phẩm:monthRevenue, yearRevenue, totalProducts
-
-  // Tổng đơn hàng
   const totalOrders = await Order.count({ where });
 
-  // Doanh thu: chỉ tính đơn completed
   const completedOrders = await Order.findAll({
     where: { ...where, order_status: "completed" },
     include: [
@@ -276,7 +287,6 @@ exports.getDashboardStats = async (filters = {}) => {
     return sum + calcTotal(order.OrderItems ?? []);
   }, 0);
 
-  // Số sản phẩm distinct đã từng được đặt
   const distinctItems = await OrderItem.findAll({
     attributes: [
       [
@@ -292,7 +302,6 @@ exports.getDashboardStats = async (filters = {}) => {
   });
   const totalItems = parseInt(distinctItems[0]?.count ?? 0);
 
-  // Số bàn distinct (đại diện cho khách hàng)
   const distinctTables = await Order.findAll({
     where,
     attributes: [

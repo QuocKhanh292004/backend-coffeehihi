@@ -1,7 +1,11 @@
 // routes/menuRoutes.js
 const express = require("express");
 const router = express.Router();
-const { verifyToken, isAdminOrManager } = require("../middleware/auth");
+const {
+  verifyToken,
+  isAdminOrManager,
+  verifyTokenOptional,
+} = require("../middleware/auth");
 const categoryController = require("../controllers/categoryController");
 const itemController = require("../controllers/itemController");
 const {
@@ -66,7 +70,11 @@ router.post(
   handleUploadError,
   categoryController.createCategory,
 );
-router.get("/categories", verifyToken, categoryController.getAllCategories);
+router.get(
+  "/categories",
+  verifyTokenOptional,
+  categoryController.getAllCategories,
+);
 router.post(
   "/categories/:id/image",
   verifyToken,
@@ -230,7 +238,7 @@ router.post(
   handleUploadError,
   itemController.createItem,
 );
-router.get("/items", verifyToken, itemController.getAllItems);
+router.get("/items", verifyTokenOptional, itemController.getAllItems);
 router.post(
   "/items/:id/image",
   verifyToken,

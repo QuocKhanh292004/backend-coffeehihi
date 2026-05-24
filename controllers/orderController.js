@@ -16,7 +16,6 @@ const STATUS_LABEL = {
   cancelled: "Đã huỷ",
 };
 
-// ✅ Tạo notification trong DB rồi emit socket
 const createAndEmitNotification = async (req, order, branch_id) => {
   try {
     const io = req.app.get("io");
@@ -78,13 +77,15 @@ exports.createOrder = async (req, res) => {
     });
 
     for (const item of order_items) {
+      console.log(">>> item từ frontend:", item); // ✅ xem frontend gửi gì
       await orderService.addOrderItem(
         order.order_id,
         item.item_id,
         item.quantity,
+        item.price ?? null,
+        item.note ?? null,
       );
     }
-
     const fullOrder = await orderService.getOrderById(order.order_id);
 
     await createAndEmitNotification(req, order, branch_id);
@@ -186,11 +187,9 @@ exports.updateOrderStatus = async (req, res) => {
       userId,
     });
 
-    // ✅ Emit order_status_updated với đầy đủ thông tin
     try {
       const io = req.app.get("io");
       if (io) {
-        // Lấy thêm Branch và Table name
         const fullOrder = await db.Order.findOne({
           where: { order_id: parseInt(id) },
           include: [
@@ -214,7 +213,6 @@ exports.updateOrderStatus = async (req, res) => {
           timestamp: new Date().toISOString(),
         };
 
-        // Emit cho chi nhánh và admin
         if (fullOrder?.branch_id) {
           io.to(`branch_${fullOrder.branch_id}`).emit(
             "order_status_updated",
@@ -223,7 +221,6 @@ exports.updateOrderStatus = async (req, res) => {
         }
         io.to("admin_room").emit("order_status_updated", payload);
 
-        // ✅ Emit riêng cho bàn đó (customer xem)
         if (fullOrder?.table_id) {
           io.to(`table_${fullOrder.table_id}`).emit(
             "order_status_updated",
@@ -283,7 +280,7 @@ exports.deleteOrder = async (req, res) => {
 // Add item to order
 exports.addItemToOrder = async (req, res) => {
   const correlationId = req.correlationId;
-  const { order_id, item_id, quantity } = req.body;
+  const { order_id, item_id, quantity, price, note } = req.body;
 
   const validation = validationUtil.validateRequiredFields(req.body, [
     "order_id",
@@ -306,6 +303,8 @@ exports.addItemToOrder = async (req, res) => {
       parseInt(order_id),
       parseInt(item_id),
       parseInt(quantity),
+      price ?? null,
+      note ?? null,
     );
 
     logger.info("Item added to order", {
@@ -326,6 +325,7 @@ exports.addItemToOrder = async (req, res) => {
   }
 };
 
+// Get dashboard stats
 exports.getDashboardStats = async (req, res) => {
   const { branch_id } = req.query;
   try {

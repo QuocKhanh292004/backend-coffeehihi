@@ -67,13 +67,11 @@ exports.forgotPassword = async (req, res) => {
   // ===== VALIDATION =====
   if (!email) {
     logger.debug("Forgot password - email missing", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Email is required", {
-          email: "Required",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Email is required", {
+        email: "Required",
+      }),
+    );
   }
 
   if (!validationUtil.isValidEmail(email)) {
@@ -81,13 +79,11 @@ exports.forgotPassword = async (req, res) => {
       correlationId,
       context: { email },
     });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Invalid email format", {
-          email: "Invalid format",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Invalid email format", {
+        email: "Invalid format",
+      }),
+    );
   }
 
   try {
@@ -167,25 +163,21 @@ exports.resetPassword = async (req, res) => {
       correlationId,
       context: { missingFields: validation.missingFields },
     });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "All fields are required", {
-          missingFields: validation.missingFields,
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "All fields are required", {
+        missingFields: validation.missingFields,
+      }),
+    );
   }
 
   // Check passwords match
   if (new_password !== confirm_password) {
     logger.debug("Reset password - passwords do not match", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Passwords do not match", {
-          confirm_password: "Must match new_password",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Passwords do not match", {
+        confirm_password: "Must match new_password",
+      }),
+    );
   }
 
   // Validate password strength
@@ -418,13 +410,11 @@ exports.changePassword = async (req, res) => {
       context: { userId, email: user.email },
     });
 
-    return res
-      .status(200)
-      .json(
-        responseUtil.success(req, "Password changed successfully", {
-          email: user.email,
-        }),
-      );
+    return res.status(200).json(
+      responseUtil.success(req, "Password changed successfully", {
+        email: user.email,
+      }),
+    );
   } catch (error) {
     logger.error("Change password failed", {
       correlationId,
@@ -446,24 +436,20 @@ exports.unlockAccount = async (req, res) => {
   // ===== VALIDATION =====
   if (!email) {
     logger.debug("Unlock account - email missing", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Email is required", {
-          email: "Required",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Email is required", {
+        email: "Required",
+      }),
+    );
   }
 
   if (!validationUtil.isValidEmail(email)) {
     logger.debug("Unlock account - invalid email format", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Invalid email format", {
-          email: "Invalid format",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Invalid email format", {
+        email: "Invalid format",
+      }),
+    );
   }
 
   try {
@@ -537,13 +523,11 @@ exports.deleteAccount = async (req, res) => {
       correlationId,
       context: { userId },
     });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Password confirmation is required", {
-          password: "Required",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Password confirmation is required", {
+        password: "Required",
+      }),
+    );
   }
 
   try {
@@ -614,13 +598,11 @@ exports.verifyEmail = async (req, res) => {
 
   if (!token) {
     logger.debug("Verify email - token missing", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Verification token is required", {
-          token: "Required",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Verification token is required", {
+        token: "Required",
+      }),
+    );
   }
 
   try {
@@ -717,26 +699,22 @@ exports.resendVerificationEmail = async (req, res) => {
   // ===== VALIDATION =====
   if (!email) {
     logger.debug("Resend verification - email missing", { correlationId });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Email is required", {
-          email: "Required",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Email is required", {
+        email: "Required",
+      }),
+    );
   }
 
   if (!validationUtil.isValidEmail(email)) {
     logger.debug("Resend verification - invalid email format", {
       correlationId,
     });
-    return res
-      .status(400)
-      .json(
-        responseUtil.validationError(req, "Invalid email format", {
-          email: "Invalid format",
-        }),
-      );
+    return res.status(400).json(
+      responseUtil.validationError(req, "Invalid email format", {
+        email: "Invalid format",
+      }),
+    );
   }
 
   try {
