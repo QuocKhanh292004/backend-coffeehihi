@@ -1,0 +1,101 @@
+# ==========================================
+# NODE.JS / NPM
+# ==========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+*.tgz
+.npm
+.eslintcache
+.node_repl_history
+*.tsbuildinfo
+
+# ==========================================
+# ENVIRONMENT VARIABLES
+# ==========================================
+.env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.docker
+
+# ==========================================
+# IDE & EDITOR
+# ==========================================
+.vscode/
+.vscode
+.idea/
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+*.code-workspace
+.eslintignore
+
+# ==========================================
+# OS FILES
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==========================================
+# BUILD & DIST
+# ==========================================
+build/
+dist/
+*.log
+logs/
+
+# ==========================================
+# DATABASE
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+database/*.db
+database/*.sqlite
+database/*.sqlite3
+
+# ==========================================
+# UPLOADS & TEMPORARY FILES
+# ==========================================
+uploads/branches/*
+uploads/categories/*
+uploads/items/*
+!uploads/.gitkeep
+!uploads/branches/.gitkeep
+!uploads/categories/.gitkeep
+!uploads/items/.gitkeep
+
+# ==========================================
+# TEST COVERAGE
+# ==========================================
+coverage/
+.coverage
+.nyc_output/
+
+# ==========================================
+# DOCKER
+# ==========================================
+docker/
+volumes/
+conf/redis/cache/**
+
+# ==========================================
+# MISC
+# ==========================================
+.pem
+*.pem
+api-test.ps1
+api-test-output.txt
