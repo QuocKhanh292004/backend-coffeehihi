@@ -3,7 +3,7 @@ import request from "../utils/request.js";
 export const getBeverages = async (categoryId = null, branchId = null) => {
     try {
         const params = new URLSearchParams();
-        if (categoryId) params.append('category_id', categoryId);
+        if (categoryId) params.append('category_id', "");
         if (branchId) params.append('branch_id', branchId);
 
         const url = params.toString() ? `/menu/items?${params.toString()}` : '/menu/items';

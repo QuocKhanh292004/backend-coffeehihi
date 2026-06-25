@@ -22,9 +22,7 @@ function Header({ onToggleMenu }) {
                             <div className="w-[7px] h-[7px] bg-slate-400 rounded-sm"></div>
                         </div>
                     </div>
-                    <h1 className="text-[17px] font-black text-slate-900 tracking-tight">
-                        Dashboard
-                    </h1>
+
                 </div>
             </div>
 
