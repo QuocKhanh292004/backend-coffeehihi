@@ -218,7 +218,6 @@ exports.updateOrderStatus = async (req, res) => {
             "order_status_updated",
             payload,
           );
-          git;
         }
         io.to("admin_room").emit("order_status_updated", payload);
 
