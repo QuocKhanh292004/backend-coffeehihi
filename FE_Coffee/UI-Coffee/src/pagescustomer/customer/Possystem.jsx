@@ -80,14 +80,17 @@ const Possystem = ({ branch_id, table_id }) => {
         id: item.item_id,
         name: item.item_name,
         price: parseFloat(item.price),
+        category_id: item.category_id,              // ← thêm dòng này
         category: item.MenuCategory?.category_name,
         desc: item.item_description,
         image: item.item_image,
     }));
 
-    const filteredItems = normalizedItems.filter(item =>
-        item.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredItems = normalizedItems.filter(item => {
+        const matchSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchCategory = selectedCategory == null || item.category_id === selectedCategory;
+        return matchSearch && matchCategory;
+    });
 
     // ─── Tạo cartKey duy nhất: cùng món nhưng khác note/ice/topping → entry riêng
     const makeCartKey = (item) => {
