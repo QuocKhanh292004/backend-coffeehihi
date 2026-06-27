@@ -76,16 +76,7 @@ exports.createOrder = async (req, res) => {
       notes,
     });
 
-    for (const item of order_items) {
-      console.log(">>> item từ frontend:", item); // ✅ xem frontend gửi gì
-      await orderService.addOrderItem(
-        order.order_id,
-        item.item_id,
-        item.quantity,
-        item.price ?? null,
-        item.note ?? null,
-      );
-    }
+    git;
     const fullOrder = await orderService.getOrderById(order.order_id);
 
     await createAndEmitNotification(req, order, branch_id);
@@ -218,7 +209,6 @@ exports.updateOrderStatus = async (req, res) => {
             "order_status_updated",
             payload,
           );
-          git;
         }
         io.to("admin_room").emit("order_status_updated", payload);
 
@@ -307,6 +297,7 @@ exports.addItemToOrder = async (req, res) => {
       price ?? null,
       note ?? null,
     );
+    node;
 
     logger.info("Item added to order", {
       correlationId,
