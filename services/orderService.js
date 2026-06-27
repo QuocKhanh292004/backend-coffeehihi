@@ -6,6 +6,10 @@ const ridUtil = require("../utils/ridUtil");
 
 const { Order, OrderItem, MenuItem } = db;
 
+<<<<<<< HEAD
+=======
+// ✅ Helper: tính total_price từ OrderItems
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
 const calcTotal = (orderItems = []) => {
   return orderItems.reduce((sum, item) => {
     return sum + Number(item.price ?? 0) * Number(item.quantity ?? 1);
@@ -33,7 +37,10 @@ exports.getOrderById = async (orderId) => {
       {
         model: OrderItem,
         as: "OrderItems",
+<<<<<<< HEAD
         // ✅ Bỏ attributes để lấy tất cả fields (bao gồm note)
+=======
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
         include: [
           {
             model: MenuItem,
@@ -42,6 +49,10 @@ exports.getOrderById = async (orderId) => {
           },
         ],
       },
+<<<<<<< HEAD
+=======
+      // ✅ Include Branch và Table
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
       {
         model: db.Branch,
         as: "Branch",
@@ -57,12 +68,20 @@ exports.getOrderById = async (orderId) => {
 
   if (!order) throw new Error("Order not found");
 
+<<<<<<< HEAD
+=======
+  // ✅ Gắn total_price vào order
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
   const plain = order.toJSON();
   plain.total_price = calcTotal(plain.OrderItems);
 
   return plain;
 };
 
+<<<<<<< HEAD
+=======
+// ✅ getAllOrders — include Branch, Table, tính total_price
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
 exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
   const offset = (page - 1) * limit;
   const where = {};
@@ -77,6 +96,7 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
       {
         model: OrderItem,
         as: "OrderItems",
+<<<<<<< HEAD
         // ✅ Bỏ attributes để lấy tất cả fields (bao gồm note)
         include: [
           {
@@ -85,6 +105,9 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
             attributes: ["item_id", "item_name", "price"],
           },
         ],
+=======
+        attributes: ["quantity", "price"],
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
       },
       {
         model: db.Branch,
@@ -100,9 +123,16 @@ exports.getAllOrders = async (page = 1, limit = 10, filters = {}) => {
     limit,
     offset,
     order: [["order_time", "DESC"]],
+<<<<<<< HEAD
     distinct: true,
   });
 
+=======
+    distinct: true, // ✅ tránh count sai khi có include
+  });
+
+  // ✅ Tính total_price cho từng order
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
   const orders = rows.map((row) => {
     const plain = row.toJSON();
     plain.total_price = calcTotal(plain.OrderItems);
@@ -176,6 +206,7 @@ exports.cancelOrder = async (orderId, reason = "") => {
   return order;
 };
 
+<<<<<<< HEAD
 exports.addOrderItem = async (
   orderId,
   itemId,
@@ -183,6 +214,9 @@ exports.addOrderItem = async (
   price = null,
   note = null,
 ) => {
+=======
+exports.addOrderItem = async (orderId, itemId, quantity) => {
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
   const order = await Order.findOne({ where: { order_id: orderId } });
   if (!order) throw new Error("Order not found");
 
@@ -191,17 +225,23 @@ exports.addOrderItem = async (
 
   if (quantity < 1) throw new Error("Quantity must be at least 1");
 
+<<<<<<< HEAD
   // ✅ Dùng price từ frontend nếu có (đã gồm topping), fallback về menuItem.price
   const finalPrice = price != null ? price : menuItem.price;
 
+=======
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
   let orderItem = await OrderItem.findOne({
     where: { order_id: orderId, item_id: itemId },
   });
 
   if (orderItem) {
     orderItem.quantity += quantity;
+<<<<<<< HEAD
     // ✅ Cập nhật note nếu có
     if (note != null) orderItem.note = note;
+=======
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
     await orderItem.save();
   } else {
     orderItem = await OrderItem.create({
@@ -209,8 +249,12 @@ exports.addOrderItem = async (
       order_id: orderId,
       item_id: itemId,
       quantity,
+<<<<<<< HEAD
       price: finalPrice, // ✅ giá thực từ frontend
       note: note ?? null, // ✅ ghi chú từng món
+=======
+      price: menuItem.price,
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
     });
   }
 
@@ -270,6 +314,7 @@ exports.getOrderStatistics = async (filters = {}) => {
     ),
   };
 };
+<<<<<<< HEAD
 
 exports.getDashboardStats = async (filters = {}) => {
   const where = {};
@@ -320,3 +365,5 @@ exports.getDashboardStats = async (filters = {}) => {
 
   return { totalRevenue, totalOrders, totalItems, totalTables, monthRevenue };
 };
+=======
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774

@@ -75,8 +75,6 @@ exports.createOrder = async (req, res) => {
       branch_id,
       notes,
     });
-
-    git;
     const fullOrder = await orderService.getOrderById(order.order_id);
 
     await createAndEmitNotification(req, order, branch_id);
@@ -178,9 +176,11 @@ exports.updateOrderStatus = async (req, res) => {
       userId,
     });
 
+    // ✅ Emit order_status_updated với đầy đủ thông tin
     try {
       const io = req.app.get("io");
       if (io) {
+        // Lấy thêm Branch và Table name
         const fullOrder = await db.Order.findOne({
           where: { order_id: parseInt(id) },
           include: [
@@ -297,7 +297,6 @@ exports.addItemToOrder = async (req, res) => {
       price ?? null,
       note ?? null,
     );
-    node;
 
     logger.info("Item added to order", {
       correlationId,

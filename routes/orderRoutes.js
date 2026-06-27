@@ -1,7 +1,15 @@
+<<<<<<< HEAD
 const express = require("express");
 const router = express.Router();
 const orderController = require("../controllers/orderController");
 const { verifyToken, isStaffOrAbove } = require("../middleware/auth");
+=======
+// routes/orderRoutes.js
+const express = require('express');
+const router = express.Router();
+const orderController = require('../controllers/orderController');
+const { verifyToken, isStaffOrAbove } = require('../middleware/auth');
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
 
 /**
  * @swagger
@@ -54,6 +62,7 @@ const { verifyToken, isStaffOrAbove } = require("../middleware/auth");
  *       400:
  *         $ref: '#/components/responses/BadRequest'
  */
+<<<<<<< HEAD
 router.post("/", verifyToken, isStaffOrAbove, orderController.createOrder);
 router.get("/", verifyToken, orderController.getAllOrders);
 
@@ -99,6 +108,10 @@ router.get(
   isStaffOrAbove,
   orderController.getDashboardStats,
 );
+=======
+router.post('/', verifyToken, isStaffOrAbove, orderController.createOrder);
+router.get('/', verifyToken, orderController.getAllOrders);
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
 
 /**
  * @swagger
@@ -159,6 +172,7 @@ router.get(
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
+<<<<<<< HEAD
 router.get("/:id", verifyToken, orderController.getOrderDetail);
 router.put(
   "/:id",
@@ -167,6 +181,11 @@ router.put(
   orderController.updateOrderStatus,
 );
 router.delete("/:id", verifyToken, isStaffOrAbove, orderController.deleteOrder);
+=======
+router.get('/:id', verifyToken, orderController.getOrderDetail);
+router.put('/:id', verifyToken, isStaffOrAbove, orderController.updateOrderStatus);
+router.delete('/:id', verifyToken, isStaffOrAbove, orderController.deleteOrder);
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
 
 /**
  * @swagger
@@ -205,6 +224,7 @@ router.delete("/:id", verifyToken, isStaffOrAbove, orderController.deleteOrder);
  *       404:
  *         $ref: '#/components/responses/NotFound'
  */
+<<<<<<< HEAD
 router.post(
   "/:order_id/items",
   verifyToken,
@@ -213,3 +233,8 @@ router.post(
 );
 
 module.exports = router;
+=======
+router.post('/:order_id/items', verifyToken, isStaffOrAbove, orderController.addItemToOrder);
+
+module.exports = router;
+>>>>>>> 2aa67279c5872f7a6d85a165ef51d50932912774
